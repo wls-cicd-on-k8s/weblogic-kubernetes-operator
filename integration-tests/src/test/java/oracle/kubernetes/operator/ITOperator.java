@@ -113,7 +113,7 @@ public class ITOperator extends BaseTest {
       logger.info("Execution of statedump.sh failed, " + result.stderr() + "\n" + result.stdout());
 
     if (JENKINS) {
-      cleanup();
+      // cleanup();
     }
 
     if (getLeaseId() != "") {
@@ -139,6 +139,7 @@ public class ITOperator extends BaseTest {
    */
   @Test
   public void testDomainOnPVUsingWLST() throws Exception {
+    Assume.assumeFalse(QUICKTEST);
     String testMethodName = new Object() {}.getClass().getEnclosingMethod().getName();
     logTestBegin(testMethodName);
     logger.info("Creating Operator & waiting for the script to complete execution");
@@ -177,7 +178,7 @@ public class ITOperator extends BaseTest {
    */
   @Test
   public void testDomainOnPVUsingWDT() throws Exception {
-    Assume.assumeFalse(QUICKTEST);
+
     String testMethodName = new Object() {}.getClass().getEnclosingMethod().getName();
     logTestBegin(testMethodName);
     logger.info("Creating Domain using DomainOnPVUsingWDT & verifing the domain creation");
@@ -197,11 +198,11 @@ public class ITOperator extends BaseTest {
       // domain.verifyAdminConsoleViaLB();
       testCompletedSuccessfully = true;
     } finally {
-      if (domain != null && (JENKINS || testCompletedSuccessfully)) {
+      /* if (domain != null && (JENKINS || testCompletedSuccessfully)) {
         logger.info("About to delete domain: " + domain.getDomainUid());
         TestUtils.deleteWeblogicDomainResources(domain.getDomainUid());
         TestUtils.verifyAfterDeletion(domain);
-      }
+      } */
     }
 
     logger.info("SUCCESS - " + testMethodName);
@@ -518,7 +519,7 @@ public class ITOperator extends BaseTest {
    *
    * @throws Exception
    */
-  // @Test
+  @Test
   public void testDomainInImageUsingWLST() throws Exception {
     Assume.assumeFalse(QUICKTEST);
     String testMethodName = new Object() {}.getClass().getEnclosingMethod().getName();
@@ -550,7 +551,7 @@ public class ITOperator extends BaseTest {
    *
    * @throws Exception
    */
-  // @Test
+  @Test
   public void testDomainInImageUsingWDT() throws Exception {
     Assume.assumeFalse(QUICKTEST);
     String testMethodName = new Object() {}.getClass().getEnclosingMethod().getName();

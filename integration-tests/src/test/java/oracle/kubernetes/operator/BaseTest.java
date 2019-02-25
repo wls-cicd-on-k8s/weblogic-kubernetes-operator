@@ -313,9 +313,10 @@ public class BaseTest {
               + replicas);
     }
 
+    // commenting the load balance check, bug 29325139
     // make sure cluster service endpoint is updated with the scaled up servers before verifying
     // load balancing
-    int i = 0;
+    /* int i = 0;
     while (i < BaseTest.getMaxIterationsPod()) {
       int numberOfServersInEndpoint =
           domain.getNumberOfServersInClusterServiceEndpoint((String) domainMap.get("clusterName"));
@@ -331,8 +332,7 @@ public class BaseTest {
         break;
       }
     }
-    // commenting the load balance check, bug 29325139
-    // domain.verifyWebAppLoadBalancing(TESTWEBAPP);
+    domain.verifyWebAppLoadBalancing(TESTWEBAPP); */
 
     replicas = 2;
     podName = domainUid + "-" + managedServerNameBase + (replicas + 1);
