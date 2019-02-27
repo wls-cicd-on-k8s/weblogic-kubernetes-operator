@@ -3,19 +3,22 @@
 package oracle.kubernetes.clustermanager.helpers;
 
 import com.google.common.base.Strings;
-import com.oracle.bmc.Region;
-import com.oracle.bmc.auth.AuthenticationDetailsProvider;
-import com.oracle.bmc.core.ComputeClient;
-import com.oracle.bmc.core.ComputeWaiters;
-import com.oracle.bmc.core.VirtualNetworkClient;
-import com.oracle.bmc.core.model.*;
-import com.oracle.bmc.core.requests.*;
-import com.oracle.bmc.core.responses.*;
+import com.oracle.bmc.core.model.CreateVnicDetails;
+import com.oracle.bmc.core.model.Image;
+import com.oracle.bmc.core.model.Instance;
+import com.oracle.bmc.core.model.InstanceSourceViaImageDetails;
+import com.oracle.bmc.core.model.LaunchInstanceDetails;
+import com.oracle.bmc.core.model.Shape;
+import com.oracle.bmc.core.model.Subnet;
+import com.oracle.bmc.core.requests.GetInstanceRequest;
+import com.oracle.bmc.core.requests.LaunchInstanceRequest;
+import com.oracle.bmc.core.requests.ListImagesRequest;
+import com.oracle.bmc.core.requests.ListShapesRequest;
+import com.oracle.bmc.core.requests.ListSubnetsRequest;
+import com.oracle.bmc.core.responses.LaunchInstanceResponse;
 import com.oracle.bmc.identity.Identity;
-import com.oracle.bmc.identity.IdentityClient;
 import com.oracle.bmc.identity.model.AvailabilityDomain;
 import com.oracle.bmc.identity.requests.ListAvailabilityDomainsRequest;
-import com.oracle.bmc.identity.responses.ListAvailabilityDomainsResponse;
 import java.io.File;
 import java.util.Base64;
 import java.util.HashMap;
@@ -27,240 +30,216 @@ import org.apache.commons.io.FileUtils;
 
 /** Create and destroy Kubernetes clusters. */
 public class ClusterHelper {
+  private OCIServices ociServices;
+
+  static final String IMAGE_NAME = "Oracle-Linux-7.6-2019.01.17-0";
+  private File script;
+
+  ClusterHelper(OCIServices ociServices) {
+    this.ociServices = ociServices;
+  }
 
   /** Create a new cluster. */
-  public static void createCluster(
-      AuthenticationDetailsProvider provider, Lease lease, ClusterSpec spec) {
+  void createCluster(Lease lease, ClusterSpec spec) {
 
     String instanceName = "ephemeral-kubernetes-" + lease.getId();
-    String compartmentId = System.getenv("CLUSTER_MANAGER_COMPARTMENT_OCID");
-    String sshPublicKey = System.getenv("CLUSTER_MANAGER_SSH_PUBLIC_KEY");
-    String subnetName = "Public Subnet VPGL:" + lease.getRegion();
-    String imageName = "Oracle-Linux-7.6-2019.01.17-0";
-
-    ComputeClient computeClient = new ComputeClient(provider);
-    computeClient.setRegion(Region.US_PHOENIX_1);
-    VirtualNetworkClient vcnClient = new VirtualNetworkClient(provider);
-
-    // get the availability domain object
-    List<AvailabilityDomain> availabilityDomains = null;
-    try {
-      availabilityDomains = getAvailabilityDomains(provider, compartmentId);
-    } catch (Exception e) {
-      System.err.println("could not get availability domains");
-      System.exit(1);
-    }
-    AvailabilityDomain adToUse = null;
-    for (AvailabilityDomain item : availabilityDomains) {
-      if (item.getName().equals(lease.getRegion())) {
-        adToUse = item;
-        break;
-      }
-    }
-    if (adToUse == null) {
-      System.err.println("did not find AD " + lease.getRegion());
-      System.exit(1);
-    }
-
-    // get the subnet object
-    List<Subnet> subnets = null;
-    try {
-      subnets = getSubnets(vcnClient, compartmentId);
-    } catch (Exception e) {
-      System.err.println("could not get subnets");
-      System.exit(1);
-    }
-    Subnet subnet = null;
-    for (Subnet item : subnets) {
-      if (item.getDisplayName().equals(subnetName)) {
-        subnet = item;
-        break;
-      }
-    }
-    if (subnet == null) {
-      System.err.println("did not find subnet " + subnetName);
-      System.exit(1);
-    }
-
-    // get the image object
-    List<Image> images = null;
-    try {
-      images = getImages(provider, computeClient, compartmentId);
-    } catch (Exception e) {
-      System.err.println("could not get images");
-      System.exit(1);
-    }
-    Image image = null;
-    for (Image item : images) {
-      if (item.getDisplayName().equals(imageName)) {
-        image = item;
-        break;
-      }
-    }
-    if (image == null) {
-      System.err.println("could not find image " + imageName);
-      System.exit(1);
-    }
-
-    // get the shape object
-    List<Shape> shapes = null;
-    try {
-      shapes = getShapes(computeClient, compartmentId);
-    } catch (Exception e) {
-      System.err.println("could not get shapes");
-      System.exit(1);
-    }
-    Shape shape = null;
-    for (Shape item : shapes) {
-      if (item.getShape().equals(lease.getShape())) {
-        shape = item;
-        break;
-      }
-    }
-    if (shape == null) {
-      System.err.println("could not find shape " + lease.getShape());
-      System.exit(1);
-    }
+    String compartmentId = ociServices.getenv("CLUSTER_MANAGER_COMPARTMENT_OCID");
+    String sshPublicKey = ociServices.getenv("CLUSTER_MANAGER_SSH_PUBLIC_KEY");
 
     Instance instance =
         createInstance(
-            computeClient,
+            getAvailabilityDomain(lease, compartmentId),
+            getImage(IMAGE_NAME, compartmentId),
+            getShape(lease, compartmentId),
             compartmentId,
-            adToUse,
+            getSubnet(createSubnetName(lease.getRegion()), compartmentId),
             instanceName,
-            image,
-            shape,
-            subnet,
             sshPublicKey,
             null); // kmsKeyId
 
     System.out.println("Instance is being created...");
 
-    Instance theInstance = null;
-    try {
-      theInstance = waitForInstanceProvisioningToComplete(computeClient, instance.getId());
-    } catch (Exception e) {
-      System.err.println("got exception while waiting for image to be created");
-      System.exit(1);
-    }
+    Instance theInstance = waitForInstanceProvisioningToComplete(instance.getId());
     if (theInstance == null) {
-      System.err.println("instance was null - this should not happen");
-      System.exit(1);
+      throw new ClusterException("instance was null - this should not happen");
     }
 
     System.out.println("Instance is provisioned.");
   }
 
+  static String createSubnetName(String region) {
+    return "Public Subnet VPGL:" + region;
+  }
+
   /** Destroy a cluster. */
   public static void destroyCluster(Lease lease) {}
 
-  private static List<Image> getImages(
-      AuthenticationDetailsProvider provider, ComputeClient computeClient, String compartmentId)
-      throws Exception {
-
-    ListImagesResponse response =
-        computeClient.listImages(ListImagesRequest.builder().compartmentId(compartmentId).build());
-
-    return response.getItems();
+  void setScript(File script) {
+    this.script = script;
   }
 
-  private static List<AvailabilityDomain> getAvailabilityDomains(
-      AuthenticationDetailsProvider provider, String compartmentId) throws Exception {
-
-    Identity identityClient = new IdentityClient(provider);
-    identityClient.setRegion(Region.US_PHOENIX_1);
-
-    ListAvailabilityDomainsResponse listAvailabilityDomainsResponse =
-        identityClient.listAvailabilityDomains(
-            ListAvailabilityDomainsRequest.builder().compartmentId(compartmentId).build());
-
-    identityClient.close();
-
-    return listAvailabilityDomainsResponse.getItems();
+  @SuppressWarnings("SameParameterValue")
+  private Image getImage(String imageName, String compartmentId) {
+    return getImages(compartmentId)
+        .stream()
+        .filter(i -> i.getDisplayName().equals(imageName))
+        .findFirst()
+        .orElseThrow(() -> new ClusterException("could not find image " + imageName));
   }
 
-  private static List<Shape> getShapes(ComputeClient computeClient, String compartmentId) {
-
-    ListShapesResponse response =
-        computeClient.listShapes(ListShapesRequest.builder().compartmentId(compartmentId).build());
-
-    return response.getItems();
+  private List<Image> getImages(String compartmentId) {
+    try {
+      return ociServices
+          .listImages(ListImagesRequest.builder().compartmentId(compartmentId).build())
+          .getItems();
+    } catch (Exception e) {
+      throw new ClusterException("could not get images", e);
+    }
   }
 
-  private static List<Subnet> getSubnets(VirtualNetworkClient vcnClient, String compartmentId) {
-
-    ListSubnetsResponse response =
-        vcnClient.listSubnets(ListSubnetsRequest.builder().compartmentId(compartmentId).build());
-
-    return response.getItems();
+  private AvailabilityDomain getAvailabilityDomain(Lease lease, String compartmentId) {
+    return getAvailabilityDomains(compartmentId)
+        .stream()
+        .filter(a -> a.getName().equals(lease.getRegion()))
+        .findFirst()
+        .orElseThrow(() -> new ClusterException("did not find AD " + lease.getRegion()));
   }
 
-  private static Instance createInstance(
-      ComputeClient computeClient,
+  private List<AvailabilityDomain> getAvailabilityDomains(String compartmentId) {
+    try (Identity identityClient = ociServices.createIdentityClient()) {
+      return identityClient
+          .listAvailabilityDomains(
+              ListAvailabilityDomainsRequest.builder().compartmentId(compartmentId).build())
+          .getItems();
+    } catch (Exception e) {
+      throw new ClusterException("could not get availability domains", e);
+    }
+  }
+
+  private Shape getShape(Lease lease, String compartmentId) {
+    return getShapes(compartmentId)
+        .stream()
+        .filter(s -> s.getShape().equals(lease.getShape()))
+        .findFirst()
+        .orElseThrow(() -> new ClusterException("could not find shape " + lease.getShape()));
+  }
+
+  private List<Shape> getShapes(String compartmentId) {
+    try {
+      return ociServices
+          .listShapes(ListShapesRequest.builder().compartmentId(compartmentId).build())
+          .getItems();
+    } catch (Exception e) {
+      throw new ClusterException("could not get shapes", e);
+    }
+  }
+
+  private Subnet getSubnet(String subnetName, String compartmentId) {
+    return getSubnets(compartmentId)
+        .stream()
+        .filter(s -> s.getDisplayName().equals(subnetName))
+        .findFirst()
+        .orElseThrow(() -> new ClusterException("did not find subnet " + subnetName));
+  }
+
+  private List<Subnet> getSubnets(String compartmentId) {
+    try {
+      return ociServices
+          .getVncClient()
+          .listSubnets(ListSubnetsRequest.builder().compartmentId(compartmentId).build())
+          .getItems();
+    } catch (Exception e) {
+      throw new ClusterException("could not get subnets", e);
+    }
+  }
+
+  private Instance createInstance(
+      AvailabilityDomain availabilityDomain,
+      Image image,
+      Shape shape,
+      String compartmentId,
+      Subnet subnet,
+      String instanceName,
+      String sshPublicKey,
+      String kmsKeyId) {
+
+    LaunchInstanceResponse response =
+        ociServices.launchInstance(
+            LaunchInstanceRequest.builder()
+                .launchInstanceDetails(
+                    createLaunchInstanceDetails(
+                        compartmentId,
+                        availabilityDomain,
+                        instanceName,
+                        image,
+                        shape,
+                        subnet,
+                        kmsKeyId,
+                        createMetadata(sshPublicKey)))
+                .build());
+
+    return response.getInstance();
+  }
+
+  private Map<String, String> createMetadata(String sshPublicKey) {
+    Map<String, String> metadata = new HashMap<>();
+    metadata.put("ssh_authorized_keys", sshPublicKey);
+    metadata.put("user_data", createEncodedScript());
+    return metadata;
+  }
+
+  private String createEncodedScript() {
+    try {
+      // TODO pick the right file
+      byte[] fileContent = FileUtils.readFileToByteArray(script);
+      return Base64.getEncoder().encodeToString(fileContent);
+    } catch (Exception e) {
+      throw new ClusterException("could not base64 encode the cloud-init script", e);
+    }
+  }
+
+  private LaunchInstanceDetails createLaunchInstanceDetails(
       String compartmentId,
       AvailabilityDomain availabilityDomain,
       String instanceName,
       Image image,
       Shape shape,
       Subnet subnet,
-      String sshPublicKey,
-      String kmsKeyId) {
-
-    Map<String, String> metadata = new HashMap<>();
-    metadata.put("ssh_authorized_keys", sshPublicKey);
-
-    String encodedString = null;
-    try {
-      // TODO pick the right file
-      byte[] fileContent =
-          FileUtils.readFileToByteArray(new File("src/main/cloud-init/olcs-19.sh"));
-      encodedString = Base64.getEncoder().encodeToString(fileContent);
-    } catch (Exception e) {
-      System.err.println("could not base64 encode the cloud-init script");
-      System.exit(1);
-    }
-
-    metadata.put("user_data", encodedString);
-
-    InstanceSourceViaImageDetails details =
-        (Strings.isNullOrEmpty(kmsKeyId))
-            ? InstanceSourceViaImageDetails.builder().imageId(image.getId()).build()
-            : InstanceSourceViaImageDetails.builder()
-                .imageId(image.getId())
-                .kmsKeyId(kmsKeyId)
-                .build();
-
-    LaunchInstanceResponse response =
-        computeClient.launchInstance(
-            LaunchInstanceRequest.builder()
-                .launchInstanceDetails(
-                    LaunchInstanceDetails.builder()
-                        .availabilityDomain(availabilityDomain.getName())
-                        .compartmentId(compartmentId)
-                        .displayName(instanceName)
-                        .faultDomain("FAULT-DOMAIN-1") // optional parameter
-                        .metadata(metadata)
-                        .shape(shape.getShape())
-                        .sourceDetails(details)
-                        .createVnicDetails(
-                            CreateVnicDetails.builder().subnetId(subnet.getId()).build())
-                        .build())
-                .build());
-
-    return response.getInstance();
+      String kmsKeyId,
+      Map<String, String> metadata) {
+    return LaunchInstanceDetails.builder()
+        .availabilityDomain(availabilityDomain.getName())
+        .compartmentId(compartmentId)
+        .displayName(instanceName)
+        .faultDomain("FAULT-DOMAIN-1") // optional parameter
+        .metadata(metadata)
+        .shape(shape.getShape())
+        .sourceDetails(getSourceDetails(image, kmsKeyId))
+        .createVnicDetails(getVnicDetails(subnet))
+        .build();
   }
 
-  private static Instance waitForInstanceProvisioningToComplete(
-      ComputeClient computeClient, String instanceId) throws Exception {
+  private InstanceSourceViaImageDetails getSourceDetails(Image image, String kmsKeyId) {
+    InstanceSourceViaImageDetails.Builder builder =
+        InstanceSourceViaImageDetails.builder().imageId(image.getId());
+    if (!Strings.isNullOrEmpty(kmsKeyId)) builder.kmsKeyId(kmsKeyId);
+    return builder.build();
+  }
 
-    ComputeWaiters waiter = computeClient.getWaiters();
-    GetInstanceResponse response =
-        waiter
-            .forInstance(
-                GetInstanceRequest.builder().instanceId(instanceId).build(),
-                Instance.LifecycleState.Running)
-            .execute();
+  private CreateVnicDetails getVnicDetails(Subnet subnet) {
+    return CreateVnicDetails.builder().subnetId(subnet.getId()).build();
+  }
 
-    return response.getInstance();
+  private Instance waitForInstanceProvisioningToComplete(String instanceId) {
+    try {
+      return ociServices.getProvisionedInstance(
+          getInstanceRequest(instanceId), Instance.LifecycleState.Running);
+    } catch (Exception e) {
+      throw new ClusterException("got exception while waiting for image to be created", e);
+    }
+  }
+
+  private GetInstanceRequest getInstanceRequest(String instanceId) {
+    return GetInstanceRequest.builder().instanceId(instanceId).build();
   }
 }
