@@ -70,7 +70,7 @@ set('ClientCertificateEnforced', false)
 
 cd('/Servers/%s/NetworkAccessPoints/T3Channel' % admin_server_name)
 set('ListenAddress', '127.0.0.1')
-set('PublicAddress', domain_uid + '-' + admin_server_name)
+set('PublicAddress', t3_public_address)
 
 templateName = cluster_name + "-template"
 cd('/ServerTemplates/%s' % templateName)

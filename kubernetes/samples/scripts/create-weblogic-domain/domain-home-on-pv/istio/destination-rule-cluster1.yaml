@@ -1,0 +1,13 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: cluster1
+spec:
+  host: domain1-cluster-cluster-1
+  subsets:
+  - name: ms1
+    labels:
+      app: managed-server1
+  - name: ms2
+    labels:
+      app: managed-server2
