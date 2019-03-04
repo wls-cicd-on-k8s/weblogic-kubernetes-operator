@@ -7,7 +7,7 @@ spec:
   subsets:
   - name: ms1
     labels:
-      app: managed-server1
+      app: domain1-managed-server1
   - name: ms2
     labels:
-      app: managed-server2
+      app: domain1-managed-server2
