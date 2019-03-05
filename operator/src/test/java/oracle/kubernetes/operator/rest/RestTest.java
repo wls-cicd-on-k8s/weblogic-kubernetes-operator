@@ -7,11 +7,17 @@ package oracle.kubernetes.operator.rest;
 import static org.junit.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+import java.net.ServerSocket;
 import java.security.KeyStore;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Handler;
 import java.util.logging.Logger;
 import javax.json.JsonObject;
@@ -336,6 +342,33 @@ public class RestTest {
   }
 
   private static class TestRestConfigImpl implements RestConfig {
+    private final int externalHttpsPort;
+    private final int internalHttpsPort;
+
+    public TestRestConfigImpl() {
+      externalHttpsPort = selectAvailablePort(8766);
+      internalHttpsPort = selectAvailablePort(8967);
+    }
+
+    public int selectAvailablePort(int start) {
+      int port = start;
+      while (isLocalPortInUse(port)) {
+        port++;
+      }
+      return port;
+    }
+
+    private boolean isLocalPortInUse(int port) {
+      try {
+        // ServerSocket try to open a LOCAL port
+        new ServerSocket(port).close();
+        // local port can be opened, it's available
+        return false;
+      } catch (IOException e) {
+        // local port cannot be opened, it's in use
+        return true;
+      }
+    }
 
     @Override
     public String getHost() {
@@ -346,12 +379,12 @@ public class RestTest {
 
     @Override
     public int getExternalHttpsPort() {
-      return 8766;
+      return externalHttpsPort;
     }
 
     @Override
     public int getInternalHttpsPort() {
-      return 8767;
+      return internalHttpsPort;
     }
 
     @Override
