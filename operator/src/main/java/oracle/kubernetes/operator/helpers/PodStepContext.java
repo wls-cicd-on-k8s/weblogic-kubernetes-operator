@@ -633,7 +633,7 @@ public abstract class PodStepContext extends StepContextBase {
             LabelConstants.CLUSTERRESTARTVERSION_LABEL, getServerSpec().getClusterRestartVersion())
         .putLabelsItem(
             LabelConstants.SERVERRESTARTVERSION_LABEL, getServerSpec().getServerRestartVersion())
-        .putLabelsItem(LabelConstants.APP_LABEL, getServerName())
+        .putLabelsItem(LabelConstants.APP_LABEL, getPodName())
         .putLabelsItem(LabelConstants.VERSION_LABEL, getVersion());
 
     // Add prometheus annotations. This will overwrite any custom annotations with same name.
