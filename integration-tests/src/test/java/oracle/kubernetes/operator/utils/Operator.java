@@ -313,27 +313,6 @@ public class Operator {
     sb.append(" >> ");
     sb.append(generatedInputYamlFile);
     logger.info("Invoking " + sb.toString());
-    logger.info("--------------------");
-    java.io.InputStream fis = new java.io.FileInputStream(generatedInputYamlFile);
-    byte[] buffer = new byte[256];
-    int count = 0;
-    StringBuffer strb = new StringBuffer();
-    try {
-      while ((count = fis.read(buffer)) > 0) {
-        String str = new String(buffer, 0, count);
-        strb.append(str);
-      }
-    } catch (Exception e) {
-    } finally {
-      if (fis != null) {
-        try {
-          fis.close();
-        } catch (Exception e) {
-        }
-      }
-    }
-    logger.info(strb.toString());
-    logger.info("^^^^^^^^^^^^^^^^^^^");
     ExecCommand.exec(sb.toString());
   }
 
