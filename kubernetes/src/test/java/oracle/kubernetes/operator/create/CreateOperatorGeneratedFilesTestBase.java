@@ -16,6 +16,7 @@ import static oracle.kubernetes.operator.utils.KubernetesArtifactUtils.newCluste
 import static oracle.kubernetes.operator.utils.KubernetesArtifactUtils.newConfigMap;
 import static oracle.kubernetes.operator.utils.KubernetesArtifactUtils.newConfigMapVolumeSource;
 import static oracle.kubernetes.operator.utils.KubernetesArtifactUtils.newContainer;
+import static oracle.kubernetes.operator.utils.KubernetesArtifactUtils.newContainerPort;
 import static oracle.kubernetes.operator.utils.KubernetesArtifactUtils.newDeployment;
 import static oracle.kubernetes.operator.utils.KubernetesArtifactUtils.newDeploymentSpec;
 import static oracle.kubernetes.operator.utils.KubernetesArtifactUtils.newEnvVar;
@@ -49,6 +50,7 @@ import io.kubernetes.client.models.ExtensionsV1beta1Deployment;
 import io.kubernetes.client.models.V1ClusterRole;
 import io.kubernetes.client.models.V1ClusterRoleBinding;
 import io.kubernetes.client.models.V1ConfigMap;
+import io.kubernetes.client.models.V1ContainerPort;
 import io.kubernetes.client.models.V1Namespace;
 import io.kubernetes.client.models.V1ResourceRequirements;
 import io.kubernetes.client.models.V1Role;
@@ -57,6 +59,8 @@ import io.kubernetes.client.models.V1Secret;
 import io.kubernetes.client.models.V1Service;
 import io.kubernetes.client.models.V1ServiceAccount;
 import io.kubernetes.client.models.V1ServiceSpec;
+import java.util.ArrayList;
+import java.util.List;
 import oracle.kubernetes.operator.utils.GeneratedOperatorObjects;
 import oracle.kubernetes.operator.utils.KubernetesArtifactUtils;
 import oracle.kubernetes.operator.utils.OperatorValues;
@@ -170,6 +174,16 @@ public abstract class CreateOperatorGeneratedFilesTestBase {
   }
 
   protected ExtensionsV1beta1Deployment getExpectedWeblogicOperatorDeployment() {
+    V1ContainerPort port1 =
+        newContainerPort().name("https-internal").containerPort(8082).protocol("TCP");
+    List ports = new ArrayList();
+    ports.add(port1);
+    if (isExternalRestPortEnabled()) {
+      V1ContainerPort port2 =
+          newContainerPort().name("https-external").containerPort(8081).protocol("TCP");
+      ports.add(port2);
+    }
+
     return newDeployment()
         .metadata(
             newObjectMeta()
@@ -193,6 +207,7 @@ public abstract class CreateOperatorGeneratedFilesTestBase {
                                 .addContainersItem(
                                     newContainer()
                                         .name("weblogic-operator")
+                                        .ports(ports)
                                         .image(getInputs().getWeblogicOperatorImage())
                                         .imagePullPolicy(
                                             getInputs().getWeblogicOperatorImagePullPolicy())
@@ -286,7 +301,7 @@ public abstract class CreateOperatorGeneratedFilesTestBase {
     if (externalRestEnabled) {
       spec.addPortsItem(
           newServicePort()
-              .name("rest")
+              .name("https-external")
               .port(8081)
               .nodePort(Integer.parseInt(getInputs().getExternalRestHttpsPort())));
     }
@@ -330,7 +345,7 @@ public abstract class CreateOperatorGeneratedFilesTestBase {
             newServiceSpec()
                 .type("ClusterIP")
                 .putSelectorItem(APP_LABEL, "weblogic-operator")
-                .addPortsItem(newServicePort().name("rest").port(8082)));
+                .addPortsItem(newServicePort().name("https-internal").port(8082)));
   }
 
   @Test
@@ -785,7 +800,7 @@ public abstract class CreateOperatorGeneratedFilesTestBase {
     if (externalRestEnabled) {
       spec.addPortsItem(
           newServicePort()
-              .name("rest")
+              .name("https-external")
               .port(8081)
               .nodePort(Integer.parseInt(inputs.getExternalRestHttpsPort())));
     }
