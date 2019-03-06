@@ -18,7 +18,7 @@ spec:
     app: "weblogic-operator"
   ports:
     {{- if .externalRestEnabled }}
-    - name: "rest"
+    - name: "https-external"
       port: 8081
       nodePort: {{ .externalRestHttpsPort }}
     {{- end }}

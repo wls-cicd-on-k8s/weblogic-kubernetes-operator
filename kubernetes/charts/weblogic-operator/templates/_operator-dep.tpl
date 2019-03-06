@@ -61,6 +61,15 @@ spec:
           name: "log-dir"
           readOnly: false
         {{- end }}
+        ports:
+        - containerPort: 8082
+          protocol: TCP
+          name: https-internal
+        {{- if .externalRestEnabled }}
+        - containerPort: 8081
+          protocol: TCP
+          name: https-external
+        {{- end }}
         livenessProbe:
           exec:
             command:
