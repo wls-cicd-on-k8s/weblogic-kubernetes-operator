@@ -39,6 +39,10 @@ public class NetworkAccessPoint {
     return protocol;
   }
 
+  public boolean isAdminProtocol() {
+    return "admin".equals(protocol);
+  }
+
   public Integer getListenPort() {
     return listenPort;
   }
