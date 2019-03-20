@@ -7,6 +7,7 @@ package oracle.kubernetes.operator.wlsconfig;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import oracle.kubernetes.operator.helpers.LegalNames;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 import org.apache.commons.lang3.builder.HashCodeBuilder;
 import org.apache.commons.lang3.builder.ToStringBuilder;
@@ -130,6 +131,29 @@ public class WlsServerConfig {
 
   public boolean isAdminPortEnabled() {
     return adminPort != null;
+  }
+
+  public String getAdminProtocolChannelName() {
+    String adminProtocolChannel = null;
+    if (networkAccessPoints != null) {
+      for (NetworkAccessPoint nap : networkAccessPoints) {
+        if (nap.isAdminProtocol()) {
+          adminProtocolChannel = LegalNames.toDNS1123LegalName(nap.getName());
+          break;
+        }
+      }
+    }
+    if (adminProtocolChannel == null) {
+      if (adminPort != null) {
+        adminProtocolChannel = "default-admin";
+      } else if (sslListenPort != null) {
+        adminProtocolChannel = "default-secure";
+      } else if (listenPort != null) {
+        adminProtocolChannel = "default";
+      }
+    }
+
+    return adminProtocolChannel;
   }
 
   /**
