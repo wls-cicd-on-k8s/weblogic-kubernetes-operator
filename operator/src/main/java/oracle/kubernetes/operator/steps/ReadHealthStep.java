@@ -18,6 +18,10 @@ import oracle.kubernetes.operator.http.HttpClient;
 import oracle.kubernetes.operator.logging.LoggingFacade;
 import oracle.kubernetes.operator.logging.LoggingFactory;
 import oracle.kubernetes.operator.logging.MessageKeys;
+import oracle.kubernetes.operator.rest.Scan;
+import oracle.kubernetes.operator.rest.ScanCache;
+import oracle.kubernetes.operator.wlsconfig.WlsDomainConfig;
+import oracle.kubernetes.operator.wlsconfig.WlsServerConfig;
 import oracle.kubernetes.operator.work.NextAction;
 import oracle.kubernetes.operator.work.Packet;
 import oracle.kubernetes.operator.work.Step;
@@ -91,8 +95,14 @@ public class ReadHealthStep extends Step {
     public NextAction apply(Packet packet) {
       try {
         HttpClient httpClient = (HttpClient) packet.get(HttpClient.KEY);
+        DomainPresenceInfo info = packet.getSPI(DomainPresenceInfo.class);
+        Scan scan = ScanCache.INSTANCE.lookupScan(info.getNamespace(), info.getDomainUID());
+        WlsDomainConfig domainConfig = scan.getWlsDomainConfig();
+        String serverName = (String) packet.get(ProcessingConstants.SERVER_NAME);
+        WlsServerConfig serverConfig = domainConfig.getServerConfig(serverName);
 
-        String serviceURL = HttpClient.getServiceURL(service);
+        String serviceURL =
+            HttpClient.getServiceURL(service, serverConfig.getAdminProtocolChannelName());
         if (serviceURL != null) {
           String jsonResult =
               httpClient
