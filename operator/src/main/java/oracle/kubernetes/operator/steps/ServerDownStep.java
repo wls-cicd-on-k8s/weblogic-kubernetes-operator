@@ -24,10 +24,11 @@ public class ServerDownStep extends Step {
   @Override
   public NextAction apply(Packet packet) {
     return doNext(
-        PodHelper.deletePodStep(
-            sko,
-            ServiceHelper.deleteServicesStep(
-                sko, new ServerDownFinalizeStep(serverName, getNext()))),
+        ShutdownServerStep.createShutdownStep(
+            PodHelper.deletePodStep(
+                sko,
+                ServiceHelper.deleteServicesStep(
+                    sko, new ServerDownFinalizeStep(serverName, getNext())))),
         packet);
   }
 }
