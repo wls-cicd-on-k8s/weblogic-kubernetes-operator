@@ -1,0 +1,46 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: default-vs
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - default-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /console
+    route:
+    - destination:
+        host: domain1-admin-server-external.ns1.svc.cluster.local
+        port:
+          number: 7001
+  - match:
+    - headers:
+        cookie:
+          regex: ^(.*?; )?(domain1-msid=.*)(;.*)?$
+    route:
+    - destination:
+        host: domain1-cluster-cluster-1.ns1.svc.cluster.local
+        port:
+          number: 31111
+  - route:
+    - destination:
+        host: domain2-cluster-cluster-1.ns2.svc.cluster.local
+        port:
+          number: 31111
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: cluster1
+  namespace: ns2
+spec:
+  host: domain2-cluster-cluster-1.ns2.svc.cluster.local
+  trafficPolicy:
+    loadBalancer:
+      consistentHash:
+        httpCookie:
+          name: domain2-msid
+          ttl: 0s
