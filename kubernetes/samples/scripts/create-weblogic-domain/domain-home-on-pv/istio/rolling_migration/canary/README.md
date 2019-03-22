@@ -9,7 +9,7 @@ Suppose there is a domain(`domain1` in namespace `ns1`) which is running on WebL
 The following is the steps of ROLLING_MIGRATION/Canary mode upgrade:
 
 1. provision a new domain(`domain2` in namespace `ns2`) and deploy the new version of web application in it
-1. route new requests to `domain2` incrementally, verify that the requests routed to `domain2` are handled normally
+1. route new requests to `domain2` incrementally, verify that the requests routed to `domain2` are processed correctly
 1. route all the traffic to `domain2`
 1. delete old domain `domain1`
 
