@@ -108,6 +108,14 @@ class ServerPod extends KubernetesResource {
   private List<V1Container> containers = new ArrayList<>();
 
   /**
+   * Configures how the operator should shutdown the server instance.
+   *
+   * @since 2.1
+   */
+  @Description("Configures how the operator should shutdown the server instance.")
+  private Shutdown shutdown = new Shutdown();
+
+  /**
    * SecurityContext holds security configuration that will be applied to a container. Some fields
    * are present in both SecurityContext and PodSecurityContext. When both are set, the values in
    * SecurityContext take precedence
@@ -133,6 +141,22 @@ class ServerPod extends KubernetesResource {
    */
   @Description("Additional volume mounts for the server pod.")
   private List<V1VolumeMount> volumeMounts = new ArrayList<>();
+
+  Shutdown getShutdown() {
+    return this.shutdown;
+  }
+
+  void setShutdown(
+      String shutdownType,
+      Integer timeoutSeconds,
+      Boolean ignoreSessions,
+      Boolean waitForAllSessions) {
+    this.shutdown
+        .shutdownType(shutdownType)
+        .timeoutSeconds(timeoutSeconds)
+        .ignoreSessions(ignoreSessions)
+        .waitForAllSessions(waitForAllSessions);
+  }
 
   ProbeTuning getReadinessProbeTuning() {
     return this.readinessProbe;
@@ -162,6 +186,7 @@ class ServerPod extends KubernetesResource {
     }
     livenessProbe.copyValues(serverPod1.livenessProbe);
     readinessProbe.copyValues(serverPod1.readinessProbe);
+    shutdown.copyValues(serverPod1.shutdown);
     for (V1Volume var : serverPod1.getAdditionalVolumes()) {
       addIfMissing(var);
     }
@@ -468,6 +493,7 @@ class ServerPod extends KubernetesResource {
         .append("containerSecurityContext", containerSecurityContext)
         .append("initContainers", initContainers)
         .append("containers", containers)
+        .append("shutdown", shutdown)
         .toString();
   }
 
@@ -502,6 +528,7 @@ class ServerPod extends KubernetesResource {
         .append(containerSecurityContext, that.containerSecurityContext)
         .append(initContainers, that.initContainers)
         .append(containers, that.containers)
+        .append(shutdown, that.shutdown)
         .isEquals();
   }
 
@@ -520,6 +547,7 @@ class ServerPod extends KubernetesResource {
         .append(containerSecurityContext)
         .append(initContainers)
         .append(containers)
+        .append(shutdown)
         .toHashCode();
   }
 

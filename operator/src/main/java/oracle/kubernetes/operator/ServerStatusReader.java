@@ -4,34 +4,20 @@
 
 package oracle.kubernetes.operator;
 
-import static oracle.kubernetes.operator.KubernetesConstants.CONTAINER_NAME;
-
-import com.google.common.base.Charsets;
 import com.google.common.io.CharStreams;
-import io.kubernetes.client.ApiClient;
-import io.kubernetes.client.ApiException;
 import io.kubernetes.client.models.V1Pod;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.Reader;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
-import oracle.kubernetes.operator.helpers.ClientPool;
 import oracle.kubernetes.operator.helpers.DomainPresenceInfo;
 import oracle.kubernetes.operator.helpers.ServerKubernetesObjects;
-import oracle.kubernetes.operator.logging.LoggingFacade;
-import oracle.kubernetes.operator.logging.LoggingFactory;
-import oracle.kubernetes.operator.logging.MessageKeys;
+import oracle.kubernetes.operator.steps.KubernetesExecStep;
 import oracle.kubernetes.operator.steps.ReadHealthStep;
-import oracle.kubernetes.operator.utils.KubernetesExec;
-import oracle.kubernetes.operator.utils.KubernetesExecFactory;
-import oracle.kubernetes.operator.utils.KubernetesExecFactoryImpl;
 import oracle.kubernetes.operator.work.NextAction;
 import oracle.kubernetes.operator.work.Packet;
 import oracle.kubernetes.operator.work.Step;
@@ -39,9 +25,8 @@ import oracle.kubernetes.weblogic.domain.model.ServerHealth;
 
 /** Creates an asynchronous step to read the WebLogic server state from a particular pod. */
 public class ServerStatusReader {
-  private static final LoggingFacade LOGGER = LoggingFactory.getLogger("Operator", "Operator");
-  private static KubernetesExecFactory EXEC_FACTORY = new KubernetesExecFactoryImpl();
   private static Function<Step, Step> STEP_FACTORY = ReadHealthStep::createReadHealthStep;
+  private static String[] COMMAND = new String[] {"/weblogic-operator/scripts/readState.sh"};
 
   private ServerStatusReader() {}
 
@@ -105,19 +90,33 @@ public class ServerStatusReader {
         sko, pod, serverName, timeoutSeconds, new ServerHealthStep(serverName, null));
   }
 
-  private static class ServerStatusReaderStep extends Step {
+  private static class ServerStatusReaderStep extends KubernetesExecStep<String> {
     private final ServerKubernetesObjects sko;
     private final V1Pod pod;
     private final String serverName;
-    private final long timeoutSeconds;
 
     ServerStatusReaderStep(
         ServerKubernetesObjects sko, V1Pod pod, String serverName, long timeoutSeconds, Step next) {
-      super(next);
+      super(pod, timeoutSeconds, next);
       this.sko = sko;
       this.pod = pod;
       this.serverName = serverName;
-      this.timeoutSeconds = timeoutSeconds;
+    }
+
+    protected String[] getCommand() {
+      return COMMAND;
+    }
+
+    protected String readStdout(Reader reader) throws IOException {
+      return CharStreams.toString(reader);
+    }
+
+    protected void processStdoutResult(Packet packet, String state) {
+      ConcurrentMap<String, String> serverStateMap =
+          (ConcurrentMap<String, String>) packet.get(ProcessingConstants.SERVER_STATE_MAP);
+
+      serverStateMap.put(
+          serverName, state != null ? state.trim() : WebLogicConstants.UNKNOWN_STATE);
     }
 
     @Override
@@ -138,45 +137,7 @@ public class ServerStatusReader {
         }
       }
 
-      // Even though we don't need input data for this call, the API server is
-      // returning 400 Bad Request any time we set these to false.  There is likely some bug in the
-      // client
-      final boolean stdin = true;
-      final boolean tty = true;
-
-      return doSuspend(
-          fiber -> {
-            Process proc = null;
-            String state = null;
-            ClientPool helper = ClientPool.getInstance();
-            ApiClient client = helper.take();
-            try {
-              KubernetesExec kubernetesExec = EXEC_FACTORY.create(client, pod, CONTAINER_NAME);
-              kubernetesExec.setStdin(stdin);
-              kubernetesExec.setTty(tty);
-              proc = kubernetesExec.exec("/weblogic-operator/scripts/readState.sh");
-
-              InputStream in = proc.getInputStream();
-              if (proc.waitFor(timeoutSeconds, TimeUnit.SECONDS)) {
-                try (final Reader reader = new InputStreamReader(in, Charsets.UTF_8)) {
-                  state = CharStreams.toString(reader);
-                }
-              }
-            } catch (InterruptedException ignore) {
-              Thread.currentThread().interrupt();
-            } catch (IOException | ApiException e) {
-              LOGGER.warning(MessageKeys.EXCEPTION, e);
-            } finally {
-              helper.recycle(client);
-              if (proc != null) {
-                proc.destroy();
-              }
-            }
-
-            serverStateMap.put(
-                serverName, state != null ? state.trim() : WebLogicConstants.UNKNOWN_STATE);
-            fiber.resume(packet);
-          });
+      return super.apply(packet);
     }
   }
 

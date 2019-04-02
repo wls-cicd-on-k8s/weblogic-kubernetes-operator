@@ -4,7 +4,6 @@
 
 package oracle.kubernetes.operator;
 
-import static com.meterware.simplestub.Stub.createStub;
 import static oracle.kubernetes.operator.ProcessingConstants.SERVER_HEALTH_MAP;
 import static oracle.kubernetes.operator.ProcessingConstants.SERVER_STATE_MAP;
 import static org.hamcrest.Matchers.contains;
@@ -14,25 +13,18 @@ import static org.hamcrest.junit.MatcherAssert.assertThat;
 import com.meterware.pseudoserver.HttpUserAgentTest;
 import com.meterware.simplestub.Memento;
 import com.meterware.simplestub.StaticStubSupport;
-import io.kubernetes.client.ApiClient;
 import io.kubernetes.client.models.V1ObjectMeta;
 import io.kubernetes.client.models.V1Pod;
 import io.kubernetes.client.models.V1PodCondition;
 import io.kubernetes.client.models.V1PodStatus;
-import java.io.ByteArrayInputStream;
-import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.function.Function;
 import oracle.kubernetes.TestUtils;
 import oracle.kubernetes.operator.helpers.DomainPresenceInfo;
 import oracle.kubernetes.operator.helpers.ServerKubernetesObjects;
-import oracle.kubernetes.operator.utils.KubernetesExec;
-import oracle.kubernetes.operator.utils.KubernetesExecFactory;
+import oracle.kubernetes.operator.steps.KubernetesExecStep;
 import oracle.kubernetes.operator.work.FiberTestSupport;
 import oracle.kubernetes.operator.work.NextAction;
 import oracle.kubernetes.operator.work.Packet;
@@ -60,7 +52,7 @@ public class ServerStatusReaderTest extends HttpUserAgentTest {
   @Before
   public void setUp() throws NoSuchFieldException {
     mementos.add(TestUtils.silenceOperatorLogger());
-    mementos.add(StaticStubSupport.install(ServerStatusReader.class, "EXEC_FACTORY", execFactory));
+    mementos.add(StaticStubSupport.install(KubernetesExecStep.class, "EXEC_FACTORY", execFactory));
     mementos.add(StaticStubSupport.install(ServerStatusReader.class, "STEP_FACTORY", stepFactory));
 
     info.getServers().putIfAbsent("server1", createServerKubernetesObjects("server1"));
@@ -172,48 +164,5 @@ public class ServerStatusReaderTest extends HttpUserAgentTest {
         }
       };
     }
-  }
-
-  static class KubernetesExecFactoryFake implements KubernetesExecFactory {
-    private Map<String, String> responses = new HashMap<>();
-
-    void defineResponse(String podName, String response) {
-      responses.put(podName, response);
-    }
-
-    @Override
-    public KubernetesExec create(ApiClient client, V1Pod pod, String containerName) {
-      return new KubernetesExec() {
-        @Override
-        public Process exec(String... command) {
-          return createStub(ProcessStub.class, getResponse(pod.getMetadata().getName()));
-        }
-
-        private String getResponse(String name) {
-          return Optional.ofNullable(responses.get(name)).orElse("** unknown pod **");
-        }
-      };
-    }
-  }
-
-  abstract static class ProcessStub extends Process {
-    private String response;
-
-    public ProcessStub(String response) {
-      this.response = response;
-    }
-
-    @Override
-    public InputStream getInputStream() {
-      return new ByteArrayInputStream(response.getBytes(Charset.forName("UTF-8")));
-    }
-
-    @Override
-    public int exitValue() {
-      return 0;
-    }
-
-    @Override
-    public void destroy() {}
   }
 }
