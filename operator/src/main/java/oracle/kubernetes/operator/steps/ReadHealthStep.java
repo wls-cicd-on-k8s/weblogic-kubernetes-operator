@@ -68,12 +68,14 @@ public class ReadHealthStep extends Step {
             ? null
             : spec.getWebLogicCredentialsSecret().getName();
 
-    Step getClient =
-        HttpClient.createAuthenticatedClientForServer(
-            namespace,
-            secretName,
-            new ReadHealthWithHttpClientStep(info.getServerService(serverName), getNext()));
-    return doNext(getClient, packet);
+    V1Service service = info.getServerService(serverName);
+    if (service != null) {
+      Step getClient =
+          HttpClient.createAuthenticatedClientForServer(
+              namespace, secretName, new ReadHealthWithHttpClientStep(service, getNext()));
+      return doNext(getClient, packet);
+    }
+    return doNext(packet);
   }
 
   private static String getRetrieveHealthSearchUrl() {

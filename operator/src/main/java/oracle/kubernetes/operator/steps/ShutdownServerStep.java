@@ -63,24 +63,26 @@ public class ShutdownServerStep extends Step {
               : spec.getWebLogicCredentialsSecret().getName();
 
       V1Pod pod = info.getServerPod(serverName);
-      String clusterName = pod.getMetadata().getLabels().get(CLUSTERNAME_LABEL);
+      if (pod != null) {
+        String clusterName = pod.getMetadata().getLabels().get(CLUSTERNAME_LABEL);
 
-      Shutdown shutdown = dom.getServer(serverName, clusterName).getShutdown();
+        Shutdown shutdown = dom.getServer(serverName, clusterName).getShutdown();
 
-      Step getClient =
-          HttpClient.createAuthenticatedClientForServer(
-              namespace,
-              secretName,
-              new ShutdownWithHttpClientStep(
-                  info.getServerService(serverName),
-                  pod,
-                  clusterName,
-                  GRACEFUL_SHUTDOWNTYPE.equals(shutdown.getShutdownType()),
-                  shutdown.getTimeoutSeconds(),
-                  shutdown.getIgnoreSessions(),
-                  shutdown.getWaitForAllSessions(),
-                  getNext()));
-      return doNext(getClient, packet);
+        Step getClient =
+            HttpClient.createAuthenticatedClientForServer(
+                namespace,
+                secretName,
+                new ShutdownWithHttpClientStep(
+                    info.getServerService(serverName),
+                    pod,
+                    clusterName,
+                    GRACEFUL_SHUTDOWNTYPE.equals(shutdown.getShutdownType()),
+                    shutdown.getTimeoutSeconds(),
+                    shutdown.getIgnoreSessions(),
+                    shutdown.getWaitForAllSessions(),
+                    getNext()));
+        return doNext(getClient, packet);
+      }
     }
     return doNext(packet);
   }
