@@ -164,7 +164,8 @@ public class ReadHealthStep extends Step {
       } catch (Throwable t) {
         // do not retry for health check
         LOGGER.fine(
-            MessageKeys.WLS_HEALTH_READ_FAILED, packet.get(ProcessingConstants.SERVER_NAME), t);
+            MessageKeys.WLS_HEALTH_READ_FAILED, packet.get(ProcessingConstants.SERVER_NAME));
+        LOGGER.fine(MessageKeys.EXCEPTION, t);
         return doNext(packet);
       }
     }

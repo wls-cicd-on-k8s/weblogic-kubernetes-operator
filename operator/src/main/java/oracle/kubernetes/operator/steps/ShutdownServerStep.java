@@ -154,7 +154,8 @@ public class ShutdownServerStep extends Step {
       } catch (Throwable t) {
         // do not retry for shutdown -- FIXME: rethink
         LOGGER.fine(
-            MessageKeys.WLS_SHUTDOWN_OP_FAILED, packet.get(ProcessingConstants.SERVER_NAME), t);
+            MessageKeys.WLS_SHUTDOWN_OP_FAILED, packet.get(ProcessingConstants.SERVER_NAME));
+        LOGGER.fine(MessageKeys.EXCEPTION, t);
         return doNext(packet);
       }
     }

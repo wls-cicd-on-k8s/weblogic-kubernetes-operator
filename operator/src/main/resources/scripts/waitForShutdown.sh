@@ -12,7 +12,7 @@ SCRIPTPATH="$( cd "$(dirname "$0")" > /dev/null 2>&1 ; pwd -P )"
 source ${SCRIPTPATH}/traceUtils.sh
 [ $? -ne 0 ] && echo "Error: missing file ${SCRIPTPATH}/traceUtils.sh" && exit 1
 
-function check_state() {
+function check_for_shutdown() {
   state=${SCRIPTPATH}/readState.sh
   exit_status=$?
   if [ $exit_status -ne 0 ]; then
@@ -37,7 +37,7 @@ function check_state() {
 # Read current state in a loop
 MAX_ATTEMPTS=${0:-30}
 attempt_num=0
-until check_state || (( ++attempt_num == MAX_ATTEMPTS ))
+until check_for_shutdown || (( ++attempt_num == MAX_ATTEMPTS ))
 do
     trace "Attempt $attempt_num: Server instance not yet shutdown"
     sleep 1

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Copyright 2017, 2018, Oracle Corporation and/or its affiliates.  All rights reserved.
+# Copyright 2017, 2019, Oracle Corporation and/or its affiliates.  All rights reserved.
 # Licensed under the Universal Permissive License v 1.0 as shown at
 # http://oss.oracle.com/licenses/upl.
 
@@ -22,7 +22,14 @@ if [ "${MOCK_WLS}" == 'true' ]; then
   exit 0
 fi
 
-[ ! -f "${SCRIPTPATH}/wlst.sh" ]             && trace "Error: missing file '${SCRIPTPATH}/wlst.sh'."             && exit 1
+# Check if the server is already shutdown
+source ${SCRIPTPATH}/waitForShutdown.sh
+[ $? -ne 0 ] && echo "Error: missing file ${SCRIPTPATH}/waitForShutdown.sh" && exit 1
+check_for_shutdown
+[ $? -eq 0 ] && echo "Server already shutdown or failed" && exit 0
+
+# Otherwise, connect to the node manager and stop the server instance
+[ ! -f "${SCRIPTPATH}/wlst.sh" ] && trace "Error: missing file '${SCRIPTPATH}/wlst.sh'." && exit 1
 
 ${SCRIPTDIR}/wlst.sh /weblogic-operator/scripts/stop-server.py 
 
