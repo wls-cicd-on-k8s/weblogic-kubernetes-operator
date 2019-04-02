@@ -18,6 +18,7 @@ import oracle.kubernetes.operator.logging.LoggingFactory;
 import oracle.kubernetes.operator.logging.MessageKeys;
 import oracle.kubernetes.operator.rest.Scan;
 import oracle.kubernetes.operator.rest.ScanCache;
+import oracle.kubernetes.operator.wlsconfig.WlsClusterConfig;
 import oracle.kubernetes.operator.wlsconfig.WlsDomainConfig;
 import oracle.kubernetes.operator.wlsconfig.WlsServerConfig;
 import oracle.kubernetes.operator.work.NextAction;
@@ -73,6 +74,7 @@ public class ShutdownServerStep extends Step {
               new ShutdownWithHttpClientStep(
                   info.getServerService(serverName),
                   pod,
+                  clusterName,
                   GRACEFUL_SHUTDOWNTYPE.equals(shutdown.getShutdownType()),
                   shutdown.getTimeoutSeconds(),
                   shutdown.getIgnoreSessions(),
@@ -105,6 +107,7 @@ public class ShutdownServerStep extends Step {
   static final class ShutdownWithHttpClientStep extends Step {
     private final V1Service service;
     private final V1Pod pod;
+    private final String clusterName;
     private final boolean isGraceful;
     private final int timeout;
     private final boolean ignoreSessions;
@@ -113,6 +116,7 @@ public class ShutdownServerStep extends Step {
     ShutdownWithHttpClientStep(
         V1Service service,
         V1Pod pod,
+        String clusterName,
         boolean isGraceful,
         int timeout,
         boolean ignoreSessions,
@@ -121,6 +125,7 @@ public class ShutdownServerStep extends Step {
       super(next);
       this.service = service;
       this.pod = pod;
+      this.clusterName = clusterName;
       this.isGraceful = isGraceful;
       this.timeout = timeout;
       this.ignoreSessions = ignoreSessions;
@@ -136,6 +141,12 @@ public class ShutdownServerStep extends Step {
         WlsDomainConfig domainConfig = scan.getWlsDomainConfig();
         String serverName = (String) packet.get(ProcessingConstants.SERVER_NAME);
         WlsServerConfig serverConfig = domainConfig.getServerConfig(serverName);
+
+        if (serverConfig == null) {
+          // dynamic server
+          WlsClusterConfig cluster = domainConfig.getClusterConfig(clusterName);
+          serverConfig = cluster.getDynamicServersConfig().getServerConfig(serverName);
+        }
 
         String serviceURL =
             HttpClient.getServiceURL(service, serverConfig.getAdminProtocolChannelName());

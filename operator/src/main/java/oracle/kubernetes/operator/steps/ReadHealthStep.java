@@ -4,6 +4,8 @@
 
 package oracle.kubernetes.operator.steps;
 
+import static oracle.kubernetes.operator.LabelConstants.CLUSTERNAME_LABEL;
+
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.models.V1ObjectMeta;
@@ -20,6 +22,7 @@ import oracle.kubernetes.operator.logging.LoggingFactory;
 import oracle.kubernetes.operator.logging.MessageKeys;
 import oracle.kubernetes.operator.rest.Scan;
 import oracle.kubernetes.operator.rest.ScanCache;
+import oracle.kubernetes.operator.wlsconfig.WlsClusterConfig;
 import oracle.kubernetes.operator.wlsconfig.WlsDomainConfig;
 import oracle.kubernetes.operator.wlsconfig.WlsServerConfig;
 import oracle.kubernetes.operator.work.NextAction;
@@ -100,6 +103,13 @@ public class ReadHealthStep extends Step {
         WlsDomainConfig domainConfig = scan.getWlsDomainConfig();
         String serverName = (String) packet.get(ProcessingConstants.SERVER_NAME);
         WlsServerConfig serverConfig = domainConfig.getServerConfig(serverName);
+
+        if (serverConfig == null) {
+          // dynamic server
+          String clusterName = service.getMetadata().getLabels().get(CLUSTERNAME_LABEL);
+          WlsClusterConfig cluster = domainConfig.getClusterConfig(clusterName);
+          serverConfig = cluster.getDynamicServersConfig().getServerConfig(serverName);
+        }
 
         String serviceURL =
             HttpClient.getServiceURL(service, serverConfig.getAdminProtocolChannelName());
