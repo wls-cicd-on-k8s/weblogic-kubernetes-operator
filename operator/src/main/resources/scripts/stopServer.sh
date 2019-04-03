@@ -60,7 +60,7 @@ timeout=${3:-30}
 ignoreSessions=${4:-false}
 force=${5:-true}
 
-${SCRIPTPATH}/wlst.sh /weblogic-operator/scripts/stop-server.py localAdminPort localAdminProtocol timeout ignoreSessions force
+${SCRIPTPATH}/wlst.sh /weblogic-operator/scripts/stop-server.py $localAdminPort $localAdminProtocol $timeout $ignoreSessions $force
 
 # Return status of 2 means failed to stop a server through the NodeManager.
 # Look to see if there is a server process that can be killed.
