@@ -22,6 +22,28 @@ if [ "${MOCK_WLS}" == 'true' ]; then
   exit 0
 fi
 
+function check_for_shutdown() {
+  state=${SCRIPTPATH}/readState.sh
+  exit_status=$?
+  if [ $exit_status -ne 0 ]; then
+    trace "Node manager not running or server instance not found; assuming shutdown"
+    return 0
+  fi
+
+  if [ "$state" = "SHUTDOWN" ]; then
+    trace "Server is shutdown"
+    return 0
+  fi
+
+  if [[ "$state" =~ ^FAILED ]]; then
+    trace "Server in failed state"
+    return 0
+  fi
+
+  trace "Server is currently in state $state"
+  return 1
+}
+
 # Check if the server is already shutdown
 check_for_shutdown
 [ $? -eq 0 ] && trace "Server already shutdown or failed" && exit 0
@@ -47,26 +69,4 @@ if [ $? -eq 2 ]; then
     kill -15 $pid
   fi
 fi
-
-function check_for_shutdown() {
-  state=${SCRIPTPATH}/readState.sh
-  exit_status=$?
-  if [ $exit_status -ne 0 ]; then
-    trace "Node manager not running or server instance not found; assuming shutdown"
-    return 0
-  fi
-
-  if [ "$state" = "SHUTDOWN" ]; then
-    trace "Server is shutdown"
-    return 0
-  fi
-
-  if [[ "$state" =~ ^FAILED ]]; then
-    trace "Server in failed state"
-    return 0
-  fi
-
-  trace "Server is currently in state $state"
-  return 1
-}
 
