@@ -725,11 +725,10 @@ public abstract class PodStepContext extends StepContextBase {
     List<String> commands = new ArrayList<>();
     commands.add(STOP_SERVER);
 
-    WlsServerConfig serverConfig = domainTopology.getServerConfig(getServerName());
-    if (serverConfig != null) {
-      Integer localAdminPort = serverConfig.getLocalAdminProtocolChannelPort();
+    if (scan != null) {
+      Integer localAdminPort = scan.getLocalAdminProtocolChannelPort();
       commands.add(String.valueOf(localAdminPort));
-      commands.add(localAdminPort.equals(serverConfig.getListenPort()) ? "t3" : "t3s");
+      commands.add(localAdminPort.equals(scan.getListenPort()) ? "t3" : "t3s");
 
       Shutdown shutdown = getServerSpec().getShutdown();
       commands.add(String.valueOf(shutdown.getTimeoutSeconds()));
