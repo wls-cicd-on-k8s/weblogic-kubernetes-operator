@@ -62,7 +62,7 @@ except Exception, e:
 # shutdown the server
 
 try:
-  shutdown(server_name, 'Server', ignoreSessions=ignore_sessions, timeOut=timeout, block='true', force=force)
+  shutdown(server_name, 'Server', ignoreSessions=ignore_sessions, timeOut=int(timeout), block='true', force=force)
 except Exception, e:
   print e
   print('Connected to the server, but failed to stop it')
