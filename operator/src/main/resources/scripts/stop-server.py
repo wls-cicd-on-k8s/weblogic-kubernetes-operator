@@ -9,7 +9,7 @@
 # for its nmConnect credentials.
 #
 
-import sys;
+import sys
 import base64
 
 def getEnvVar(var):
@@ -24,11 +24,13 @@ server_name = getEnvVar('SERVER_NAME')
 domain_name = getEnvVar('DOMAIN_NAME')
 domain_path = getEnvVar('DOMAIN_HOME')
 service_name = getEnvVar('SERVICE_NAME')
-localAdminPort = sys.argv[1]
-localAdminProtocol = sys.argv[2]
+local_admin_port = sys.argv[1]
+local_admin_protocol = sys.argv[2]
 timeout = sys.argv[3]
 ignore_sessions = sys.argv[4]
 force = sys.argv[5]
+
+connect_url = local_admin_protocol + '://' + service_name + ':' + local_admin_port
 
 # Convert b64 encoded user key into binary
 
@@ -46,7 +48,7 @@ file.close()
 try:
   connect(userConfigFile='/weblogic-operator/introspector/userConfigNodeManager.secure',
             userKeyFile='/tmp/userKeyNodeManager.secure.bin',
-            url=localAdminProtocol+'://'+service_name+':'+localAdminPort,
+            url=connect_url,
             domainName=domain_name,
             domainDir=domain_path,
             nmType='plain')
