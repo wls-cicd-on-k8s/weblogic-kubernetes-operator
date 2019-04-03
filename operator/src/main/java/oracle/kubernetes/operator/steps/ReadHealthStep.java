@@ -9,6 +9,7 @@ import static oracle.kubernetes.operator.LabelConstants.CLUSTERNAME_LABEL;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.kubernetes.client.models.V1ObjectMeta;
+import io.kubernetes.client.models.V1Pod;
 import io.kubernetes.client.models.V1Service;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -69,10 +70,11 @@ public class ReadHealthStep extends Step {
             : spec.getWebLogicCredentialsSecret().getName();
 
     V1Service service = info.getServerService(serverName);
+    V1Pod pod = info.getServerPod(serverName);
     if (service != null) {
       Step getClient =
           HttpClient.createAuthenticatedClientForServer(
-              namespace, secretName, new ReadHealthWithHttpClientStep(service, getNext()));
+              namespace, secretName, new ReadHealthWithHttpClientStep(service, pod, getNext()));
       return doNext(getClient, packet);
     }
     return doNext(packet);
@@ -90,10 +92,12 @@ public class ReadHealthStep extends Step {
 
   static final class ReadHealthWithHttpClientStep extends Step {
     private final V1Service service;
+    private final V1Pod pod;
 
-    ReadHealthWithHttpClientStep(V1Service service, Step next) {
+    ReadHealthWithHttpClientStep(V1Service service, V1Pod pod, Step next) {
       super(next);
       this.service = service;
+      this.pod = pod;
     }
 
     @Override
@@ -114,7 +118,7 @@ public class ReadHealthStep extends Step {
         }
 
         String serviceURL =
-            HttpClient.getServiceURL(service, serverConfig.getAdminProtocolChannelName());
+            HttpClient.getServiceURL(service, pod, serverConfig.getAdminProtocolChannelName());
         if (serviceURL != null) {
           String jsonResult =
               httpClient

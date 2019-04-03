@@ -59,6 +59,7 @@ public class UpdateDynamicClusterStep extends Step {
         String serviceURL =
             HttpClient.getServiceURL(
                 info.getServerService(domainTopology.getAdminServerName()),
+                info.getServerPod(domainTopology.getAdminServerName()),
                 adminConfig.getAdminProtocolChannelName());
 
         boolean successful =

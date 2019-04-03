@@ -4,6 +4,7 @@
 
 package oracle.kubernetes.operator.http;
 
+import io.kubernetes.client.models.V1Pod;
 import io.kubernetes.client.models.V1Service;
 import io.kubernetes.client.models.V1ServicePort;
 import io.kubernetes.client.models.V1ServiceSpec;
@@ -253,27 +254,34 @@ public class HttpClient {
    * @return The URL of the Service or null if the URL cannot be found.
    */
   public static String getServiceURL(V1Service service) {
-    return getServiceURL(service, null);
+    return getServiceURL(service, null, null);
   }
 
   /**
-   * Returns the URL to access the Service; using the Service clusterIP and port.
+   * Returns the URL to access the Service; using the Service clusterIP and port. If the service is
+   * headless, then the pod's IP is returned, if available.
    *
    * @param service The name of the Service that you want the URL for.
+   * @param pod The pod for headless services
    * @param adminPort administration port name
    * @return The URL of the Service or null if the URL cannot be found.
    */
-  public static String getServiceURL(V1Service service, String adminPort) {
+  public static String getServiceURL(V1Service service, V1Pod pod, String adminPort) {
     if (service != null) {
       V1ServiceSpec spec = service.getSpec();
       if (spec != null) {
-        String portalIP =
-            "None".equalsIgnoreCase(spec.getClusterIP())
-                ? service.getMetadata().getName()
+        String portalIP = spec.getClusterIP();
+        if ("None".equalsIgnoreCase(spec.getClusterIP())) {
+          if (pod != null && pod.getStatus().getPodIP() != null) {
+            portalIP = pod.getStatus().getPodIP();
+          } else {
+            portalIP =
+                service.getMetadata().getName()
                     + "."
                     + service.getMetadata().getNamespace()
-                    + ".svc.cluster.local"
-                : spec.getClusterIP();
+                    + ".pod.cluster.local";
+          }
+        }
         int port = -1; // uninitialized
         if (adminPort != null) {
           for (V1ServicePort sp : spec.getPorts()) {

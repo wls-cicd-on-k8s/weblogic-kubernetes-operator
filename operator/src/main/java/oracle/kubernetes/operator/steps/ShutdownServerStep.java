@@ -151,7 +151,7 @@ public class ShutdownServerStep extends Step {
         }
 
         String serviceURL =
-            HttpClient.getServiceURL(service, serverConfig.getAdminProtocolChannelName());
+            HttpClient.getServiceURL(service, pod, serverConfig.getAdminProtocolChannelName());
         if (serviceURL != null) {
           String jsonResult =
               httpClient
