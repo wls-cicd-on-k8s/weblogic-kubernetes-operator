@@ -23,7 +23,9 @@ if [ "${MOCK_WLS}" == 'true' ]; then
 fi
 
 function check_for_shutdown() {
-  state=${SCRIPTPATH}/readState.sh
+  [ ! -f "${SCRIPTPATH}/readState.sh" ] && trace "Error: missing file '${SCRIPTPATH}/readState.sh'." && exit 1
+
+  state=`${SCRIPTPATH}/readState.sh`
   exit_status=$?
   if [ $exit_status -ne 0 ]; then
     trace "Node manager not running or server instance not found; assuming shutdown"
@@ -58,7 +60,7 @@ timeout=${3:-30}
 ignoreSessions=${4:-false}
 force=${5:-true}
 
-${SCRIPTDIR}/wlst.sh /weblogic-operator/scripts/stop-server.py localAdminPort localAdminProtocol timeout ignoreSessions force
+${SCRIPTPATH}/wlst.sh /weblogic-operator/scripts/stop-server.py localAdminPort localAdminProtocol timeout ignoreSessions force
 
 # Return status of 2 means failed to stop a server through the NodeManager.
 # Look to see if there is a server process that can be killed.
