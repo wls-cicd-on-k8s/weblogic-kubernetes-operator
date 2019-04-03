@@ -4,7 +4,6 @@
 
 package oracle.kubernetes.operator.steps;
 
-import java.util.function.Function;
 import oracle.kubernetes.operator.helpers.PodHelper;
 import oracle.kubernetes.operator.helpers.ServerKubernetesObjects;
 import oracle.kubernetes.operator.helpers.ServiceHelper;
@@ -13,8 +12,6 @@ import oracle.kubernetes.operator.work.Packet;
 import oracle.kubernetes.operator.work.Step;
 
 public class ServerDownStep extends Step {
-  private static Function<Step, Step> STEP_FACTORY = ShutdownServerStep::createShutdownStep;
-
   private final ServerKubernetesObjects sko;
 
   public ServerDownStep(ServerKubernetesObjects sko, Step next) {
@@ -25,9 +22,8 @@ public class ServerDownStep extends Step {
   @Override
   public NextAction apply(Packet packet) {
     return doNext(
-        STEP_FACTORY.apply(
-            PodHelper.deletePodStep(
-                sko, ServiceHelper.deleteServicesStep(sko, new ServerDownFinalizeStep(getNext())))),
+        PodHelper.deletePodStep(
+            sko, ServiceHelper.deleteServicesStep(sko, new ServerDownFinalizeStep(getNext()))),
         packet);
   }
 }

@@ -4,6 +4,7 @@
 
 package oracle.kubernetes.operator.helpers;
 
+import static oracle.kubernetes.operator.KubernetesConstants.GRACEFUL_SHUTDOWNTYPE;
 import static oracle.kubernetes.operator.LabelConstants.forDomainUidSelector;
 import static oracle.kubernetes.operator.VersionConstants.DEFAULT_DOMAIN_VERSION;
 
@@ -52,6 +53,7 @@ import oracle.kubernetes.operator.work.Packet;
 import oracle.kubernetes.operator.work.Step;
 import oracle.kubernetes.weblogic.domain.model.Domain;
 import oracle.kubernetes.weblogic.domain.model.ServerSpec;
+import oracle.kubernetes.weblogic.domain.model.Shutdown;
 import org.apache.commons.lang3.builder.EqualsBuilder;
 
 @SuppressWarnings("deprecation")
@@ -712,11 +714,29 @@ public abstract class PodStepContext extends StepContextBase {
   }
 
   private V1Lifecycle createLifecycle() {
-    return new V1Lifecycle().preStop(handler(STOP_SERVER));
+    return new V1Lifecycle().preStop(handler(createPreStopCommand()));
   }
 
   private V1Handler handler(String... commandItems) {
     return new V1Handler().exec(execAction(commandItems));
+  }
+
+  private String[] createPreStopCommand() {
+    List<String> commands = new ArrayList<>();
+    commands.add(STOP_SERVER);
+
+    WlsServerConfig serverConfig = domainTopology.getServerConfig(getServerName());
+    if (serverConfig != null) {
+      Integer localAdminPort = serverConfig.getLocalAdminProtocolChannelPort();
+      commands.add(String.valueOf(localAdminPort));
+      commands.add(localAdminPort.equals(serverConfig.getListenPort()) ? "t3" : "t3s");
+
+      Shutdown shutdown = getServerSpec().getShutdown();
+      commands.add(String.valueOf(shutdown.getTimeoutSeconds()));
+      commands.add(String.valueOf(shutdown.getIgnoreSessions()));
+      commands.add(String.valueOf(!GRACEFUL_SHUTDOWNTYPE.equals(shutdown.getShutdownType())));
+    }
+    return commands.toArray(new String[0]);
   }
 
   private V1ExecAction execAction(String... commandItems) {

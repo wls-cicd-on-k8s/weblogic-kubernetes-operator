@@ -146,16 +146,11 @@ class ServerPod extends KubernetesResource {
     return this.shutdown;
   }
 
-  void setShutdown(
-      String shutdownType,
-      Integer timeoutSeconds,
-      Boolean ignoreSessions,
-      Boolean waitForAllSessions) {
+  void setShutdown(String shutdownType, Integer timeoutSeconds, Boolean ignoreSessions) {
     this.shutdown
         .shutdownType(shutdownType)
         .timeoutSeconds(timeoutSeconds)
-        .ignoreSessions(ignoreSessions)
-        .waitForAllSessions(waitForAllSessions);
+        .ignoreSessions(ignoreSessions);
   }
 
   ProbeTuning getReadinessProbeTuning() {

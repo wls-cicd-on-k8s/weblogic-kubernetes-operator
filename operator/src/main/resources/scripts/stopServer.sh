@@ -23,24 +23,50 @@ if [ "${MOCK_WLS}" == 'true' ]; then
 fi
 
 # Check if the server is already shutdown
-source ${SCRIPTPATH}/waitForShutdown.sh
-[ $? -ne 0 ] && echo "Error: missing file ${SCRIPTPATH}/waitForShutdown.sh" && exit 1
 check_for_shutdown
-[ $? -eq 0 ] && echo "Server already shutdown or failed" && exit 0
+[ $? -eq 0 ] && trace "Server already shutdown or failed" && exit 0
 
 # Otherwise, connect to the node manager and stop the server instance
 [ ! -f "${SCRIPTPATH}/wlst.sh" ] && trace "Error: missing file '${SCRIPTPATH}/wlst.sh'." && exit 1
 
-${SCRIPTDIR}/wlst.sh /weblogic-operator/scripts/stop-server.py 
+# Arguments for shutdown
+localAdminPort=${1:-${MANAGED_SERVER_PORT:-8001}}
+localAdminProtocol=${2:-t3}
+timeout=${3:-30}
+ignoreSessions=${4:-false}
+force=${5:-true}
+
+${SCRIPTDIR}/wlst.sh /weblogic-operator/scripts/stop-server.py localAdminPort localAdminProtocol timeout ignoreSessions force
 
 # Return status of 2 means failed to stop a server through the NodeManager.
 # Look to see if there is a server process that can be killed.
 if [ $? -eq 2 ]; then
   pid=$(jps -v | grep '[D]weblogic.Name=${SERVER_NAME}' | awk '{print $1}')
   if [ ! -z $pid ]; then
-    echo "Killing the server process $pid"
+    trace "Killing the server process $pid"
     kill -15 $pid
   fi
 fi
 
+function check_for_shutdown() {
+  state=${SCRIPTPATH}/readState.sh
+  exit_status=$?
+  if [ $exit_status -ne 0 ]; then
+    trace "Node manager not running or server instance not found; assuming shutdown"
+    return 0
+  fi
+
+  if [ "$state" = "SHUTDOWN" ]; then
+    trace "Server is shutdown"
+    return 0
+  fi
+
+  if [[ "$state" =~ ^FAILED ]]; then
+    trace "Server in failed state"
+    return 0
+  fi
+
+  trace "Server is currently in state $state"
+  return 1
+}
 

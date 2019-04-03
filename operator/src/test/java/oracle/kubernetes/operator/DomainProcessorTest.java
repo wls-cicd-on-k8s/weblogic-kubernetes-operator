@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Function;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import oracle.kubernetes.TestUtils;
@@ -52,14 +51,9 @@ import oracle.kubernetes.operator.helpers.LegalNames;
 import oracle.kubernetes.operator.helpers.ServiceHelper;
 import oracle.kubernetes.operator.helpers.TuningParametersStub;
 import oracle.kubernetes.operator.helpers.UnitTestHash;
-import oracle.kubernetes.operator.steps.KubernetesExecStep;
-import oracle.kubernetes.operator.steps.ServerDownStep;
 import oracle.kubernetes.operator.utils.InMemoryCertificates;
 import oracle.kubernetes.operator.work.FiberGate;
 import oracle.kubernetes.operator.work.FiberTestSupport;
-import oracle.kubernetes.operator.work.NextAction;
-import oracle.kubernetes.operator.work.Packet;
-import oracle.kubernetes.operator.work.Step;
 import oracle.kubernetes.weblogic.domain.DomainConfigurator;
 import oracle.kubernetes.weblogic.domain.DomainConfiguratorFactory;
 import oracle.kubernetes.weblogic.domain.model.Domain;
@@ -96,8 +90,6 @@ public class DomainProcessorTest {
           .withSpec(
               new DomainSpec()
                   .withWebLogicCredentialsSecret(new V1SecretReference().name("secret-name")));
-  private final KubernetesExecFactoryFake execFactory = new KubernetesExecFactoryFake();
-  private final ShutdownServerStepFactoryFake stepFactory = new ShutdownServerStepFactoryFake();
 
   private static V1ObjectMeta withTimestamps(V1ObjectMeta meta) {
     return meta.creationTimestamp(DateTime.now()).resourceVersion("1");
@@ -108,8 +100,6 @@ public class DomainProcessorTest {
     mementos.add(TestUtils.silenceOperatorLogger());
     mementos.add(testSupport.install());
     mementos.add(StaticStubSupport.install(DomainProcessorImpl.class, "DOMAINS", presenceInfoMap));
-    mementos.add(StaticStubSupport.install(KubernetesExecStep.class, "EXEC_FACTORY", execFactory));
-    mementos.add(StaticStubSupport.install(ServerDownStep.class, "STEP_FACTORY", stepFactory));
     mementos.add(TuningParametersStub.install());
     mementos.add(InMemoryCertificates.install());
     mementos.add(UnitTestHash.install());
@@ -289,21 +279,6 @@ public class DomainProcessorTest {
     public ScheduledFuture<?> scheduleWithFixedDelay(
         Runnable command, long initialDelay, long delay, TimeUnit unit) {
       return testSupport.scheduleWithFixedDelay(command, initialDelay, delay, unit);
-    }
-  }
-
-  static class ShutdownServerStepFactoryFake implements Function<Step, Step> {
-    List<String> serverNames = new ArrayList<>();
-
-    @Override
-    public Step apply(Step next) {
-      return new Step(next) {
-        @Override
-        public NextAction apply(Packet packet) {
-          serverNames.add((String) packet.get(ProcessingConstants.SERVER_NAME));
-          return doNext(packet);
-        }
-      };
     }
   }
 

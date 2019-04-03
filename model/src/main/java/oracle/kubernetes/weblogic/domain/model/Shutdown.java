@@ -18,7 +18,6 @@ import org.apache.commons.lang3.builder.ToStringBuilder;
 public class Shutdown {
   private static final Integer DEFAULT_TIMEOUT = 30;
   private static final Boolean DEFAULT_IGNORESESSIONS = Boolean.FALSE;
-  private static final Boolean DEFAULT_WAITFORALLSESSIONS = Boolean.FALSE;
 
   @Description(
       "Tells the operator how to shutdown server instances. Not required."
@@ -34,10 +33,6 @@ public class Shutdown {
       "For graceful shutdown only, indicates to ignore pending HTTP sessions during in-flight work handling. Not required. Defaults to false.")
   private Boolean ignoreSessions;
 
-  @Description(
-      "For graceful shutdown only, indicates waiting for all HTTP sessions during in-light work handling; false indicates waiting for non-persisted HTTP sessions only. Not required. Default to false.")
-  private Boolean waitForAllSessions;
-
   public Shutdown() {}
 
   void copyValues(Shutdown fromShutdown) {
@@ -49,9 +44,6 @@ public class Shutdown {
     }
     if (ignoreSessions == null) {
       ignoreSessions(fromShutdown.ignoreSessions);
-    }
-    if (waitForAllSessions == null) {
-      waitForAllSessions(fromShutdown.waitForAllSessions);
     }
   }
 
@@ -82,22 +74,12 @@ public class Shutdown {
     return this;
   }
 
-  public Boolean getWaitForAllSessions() {
-    return Optional.ofNullable(waitForAllSessions).orElse(DEFAULT_WAITFORALLSESSIONS);
-  }
-
-  public Shutdown waitForAllSessions(Boolean waitForAllSessions) {
-    this.waitForAllSessions = waitForAllSessions;
-    return this;
-  }
-
   @Override
   public String toString() {
     return new ToStringBuilder(this)
         .append("shutdownType", shutdownType)
         .append("timeoutSeconds", timeoutSeconds)
         .append("ignoreSessions", ignoreSessions)
-        .append("waitForAllSessions", waitForAllSessions)
         .toString();
   }
 
@@ -117,7 +99,6 @@ public class Shutdown {
         .append(shutdownType, that.shutdownType)
         .append(timeoutSeconds, that.timeoutSeconds)
         .append(ignoreSessions, that.ignoreSessions)
-        .append(waitForAllSessions, that.waitForAllSessions)
         .isEquals();
   }
 
@@ -127,7 +108,6 @@ public class Shutdown {
         .append(shutdownType)
         .append(timeoutSeconds)
         .append(ignoreSessions)
-        .append(waitForAllSessions)
         .toHashCode();
   }
 }

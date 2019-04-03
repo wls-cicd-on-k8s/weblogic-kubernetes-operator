@@ -156,6 +156,29 @@ public class WlsServerConfig {
     return adminProtocolChannel;
   }
 
+  public Integer getLocalAdminProtocolChannelPort() {
+    Integer adminProtocolPort = null;
+    if (networkAccessPoints != null) {
+      for (NetworkAccessPoint nap : networkAccessPoints) {
+        if (nap.isAdminProtocol()) {
+          adminProtocolPort = nap.getListenPort();
+          break;
+        }
+      }
+    }
+    if (adminProtocolPort == null) {
+      if (adminPort != null) {
+        adminProtocolPort = adminPort;
+      } else if (sslListenPort != null) {
+        adminProtocolPort = sslListenPort;
+      } else if (listenPort != null) {
+        adminProtocolPort = listenPort;
+      }
+    }
+
+    return adminProtocolPort;
+  }
+
   /**
    * Creates a WLSServerConfig object using an "servers" or "serverTemplates" item parsed from JSON
    * result from WLS REST call.

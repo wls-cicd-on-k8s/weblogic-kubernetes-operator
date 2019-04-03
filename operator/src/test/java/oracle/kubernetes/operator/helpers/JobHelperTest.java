@@ -190,7 +190,10 @@ public class JobHelperTest {
 
     MatcherAssert.assertThat(
         getContainerFromJobSpec(jobSpec, domainPresenceInfo.getDomainUID()).getEnv(),
-        allOf(hasEnvVar("USER_MEM_ARGS", "-Djava.security.egd=file:/dev/./urandom")));
+        allOf(
+            hasEnvVar(
+                "USER_MEM_ARGS",
+                "-XX:+UseContainerSupport -Djava.security.egd=file:/dev/./urandom")));
   }
 
   @Test

@@ -167,7 +167,6 @@ Shutdown describes the configuration for shutting down a server instance.
 | ignoreSessions | boolean | For graceful shutdown only, indicates to ignore pending HTTP sessions during in-flight work handling. Not required. Defaults to false. |
 | shutdownType | string | Tells the operator how to shutdown server instances. Not required. Defaults to graceful shutdown. |
 | timeoutSeconds | number | For graceful shutdown only, number of seconds to wait before aborting in-flight work and shutting down the server. Not required. Defaults to 30 seconds. |
-| waitForAllSessions | boolean | For graceful shutdown only, indicates waiting for all HTTP sessions during in-light work handling; false indicates waiting for non-persisted HTTP sessions only. Not required. Default to false. |
 
 ### Server Health
 

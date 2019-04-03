@@ -329,7 +329,13 @@ public abstract class PodHelperTestBase {
   public void whenPodCreated_lifecyclePreStopHasStopServerCommand() {
     assertThat(
         getCreatedPodSpecContainer().getLifecycle().getPreStop().getExec().getCommand(),
-        contains("/weblogic-operator/scripts/stopServer.sh"));
+        contains(
+            "/weblogic-operator/scripts/stopServer.sh",
+            String.valueOf(listenPort),
+            "t3",
+            "30",
+            "false",
+            "false"));
   }
 
   @Test
@@ -430,7 +436,9 @@ public abstract class PodHelperTestBase {
             hasEnvVar("LOG_HOME", null),
             hasEnvVar("SERVICE_NAME", LegalNames.toServerServiceName(UID, getServerName())),
             hasEnvVar("AS_SERVICE_NAME", LegalNames.toServerServiceName(UID, ADMIN_SERVER)),
-            hasEnvVar("USER_MEM_ARGS", "-Djava.security.egd=file:/dev/./urandom")));
+            hasEnvVar(
+                "USER_MEM_ARGS",
+                "-XX:+UseContainerSupport -Djava.security.egd=file:/dev/./urandom")));
   }
 
   @Test
