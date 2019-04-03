@@ -37,9 +37,9 @@ function check_for_shutdown() {
 # Read current state in a loop
 MAX_ATTEMPTS=${0:-30}
 attempt_num=0
-until check_for_shutdown || (( ++attempt_num == MAX_ATTEMPTS ))
-do
+while ! check_for_shutdown ; do
     trace "Attempt $attempt_num: Server instance not yet shutdown"
+    ((attempt_num++));if [[ attempt_num -eq MAX_ATTEMPTS ]];then break;fi
     sleep 1
 done
 
