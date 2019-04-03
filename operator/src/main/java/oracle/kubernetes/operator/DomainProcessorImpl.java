@@ -338,8 +338,6 @@ public class DomainProcessorImpl implements DomainProcessor {
             try {
               Runnable r = this; // resolve visibility
               Packet packet = new Packet();
-
-              // HERE: may need to add scan to packet
               packet
                   .getComponents()
                   .put(
