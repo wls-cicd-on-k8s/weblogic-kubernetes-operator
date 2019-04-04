@@ -35,6 +35,8 @@ public class PodHelperTest {
   private static final String POD_NAME = "pod1";
   private static final String NS = "ns1";
 
+  private static final Long GRACEPERIOD_SECONDS = 40l;
+
   private AsyncCallTestSupport testSupport = new AsyncCallTestSupport();
   private final TerminalStep terminalStep = new TerminalStep();
   private List<Memento> mementos = new ArrayList<>();
@@ -87,7 +89,7 @@ public class PodHelperTest {
         .createCannedResponse("deletePod")
         .withName(POD_NAME)
         .withNamespace(NS)
-        .withBody(new V1DeleteOptions());
+        .withBody(new V1DeleteOptions().gracePeriodSeconds(GRACEPERIOD_SECONDS));
   }
 
   private ServerKubernetesObjects createSko(V1Pod pod) {

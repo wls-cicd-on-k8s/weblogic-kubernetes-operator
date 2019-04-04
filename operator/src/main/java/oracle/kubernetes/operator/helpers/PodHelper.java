@@ -340,8 +340,13 @@ public class PodHelper {
         String name = oldPod.getMetadata().getName();
 
         long gracePeriodSeconds = 30; // default
-        String serverName = oldPod.getMetadata().getLabels().get(SERVERNAME_LABEL);
-        String clusterName = oldPod.getMetadata().getLabels().get(CLUSTERNAME_LABEL);
+        String serverName = null;
+        String clusterName = null;
+        Map<String, String> labels = oldPod.getMetadata().getLabels();
+        if (labels != null) {
+          serverName = labels.get(SERVERNAME_LABEL);
+          clusterName = labels.get(CLUSTERNAME_LABEL);
+        }
         ServerSpec serverSpec = info.getDomain().getServer(serverName, clusterName);
         if (serverSpec != null) {
           gracePeriodSeconds = serverSpec.getShutdown().getTimeoutSeconds() + 10;

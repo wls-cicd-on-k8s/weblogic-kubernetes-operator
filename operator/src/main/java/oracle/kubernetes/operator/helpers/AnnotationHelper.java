@@ -4,11 +4,16 @@
 
 package oracle.kubernetes.operator.helpers;
 
+import io.kubernetes.client.models.V1Container;
+import io.kubernetes.client.models.V1ExecAction;
 import io.kubernetes.client.models.V1ObjectMeta;
 import io.kubernetes.client.models.V1Pod;
 import io.kubernetes.client.models.V1Service;
 import io.kubernetes.client.util.Yaml;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
+import oracle.kubernetes.operator.KubernetesConstants;
 import org.apache.commons.codec.digest.DigestUtils;
 
 /** Annotates pods, services with details about the Domain instance and checks these annotations. */
@@ -49,7 +54,36 @@ public class AnnotationHelper {
   }
 
   private static V1Pod addHash(V1Pod pod) {
-    pod.getMetadata().putAnnotationsItem(SHA256_ANNOTATION, HASH_FUNCTION.apply(pod));
+    Function<V1Pod, String> keepHashedPodUnchanged =
+        (p) -> {
+          V1Container container = null;
+          V1ExecAction action = null;
+          List<String> commands = null;
+          for (V1Container c : p.getSpec().getContainers()) {
+            if (c.getName().equals(KubernetesConstants.CONTAINER_NAME)) {
+              container = c;
+              break;
+            }
+          }
+          if (container != null) {
+            action = container.getLifecycle().getPreStop().getExec();
+
+            // Simplify commands before the hash to match 2.0.1 behavior
+            // and then restore after
+            commands = action.getCommand();
+            List<String> simplifiedCommands = new ArrayList<>();
+            simplifiedCommands.add(commands.get(0));
+            action.setCommand(simplifiedCommands);
+          }
+          try {
+            return HASH_FUNCTION.apply(p);
+          } finally {
+            if (commands != null) {
+              action.setCommand(commands);
+            }
+          }
+        };
+    pod.getMetadata().putAnnotationsItem(SHA256_ANNOTATION, keepHashedPodUnchanged.apply(pod));
     return pod;
   }
 
