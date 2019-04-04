@@ -4,6 +4,9 @@
 
 package oracle.kubernetes.operator.helpers;
 
+import static oracle.kubernetes.operator.LabelConstants.CLUSTERNAME_LABEL;
+import static oracle.kubernetes.operator.LabelConstants.SERVERNAME_LABEL;
+
 import io.kubernetes.client.models.V1Container;
 import io.kubernetes.client.models.V1DeleteOptions;
 import io.kubernetes.client.models.V1EnvVar;
@@ -16,7 +19,6 @@ import java.util.Map;
 import java.util.Optional;
 import oracle.kubernetes.operator.DomainStatusUpdater;
 import oracle.kubernetes.operator.KubernetesConstants;
-import oracle.kubernetes.operator.LabelConstants;
 import oracle.kubernetes.operator.PodAwaiterStepFactory;
 import oracle.kubernetes.operator.ProcessingConstants;
 import oracle.kubernetes.operator.TuningParameters;
@@ -269,7 +271,7 @@ public class PodHelper {
     protected V1ObjectMeta createMetadata() {
       V1ObjectMeta metadata = super.createMetadata();
       if (getClusterName() != null) {
-        metadata.putLabelsItem(LabelConstants.CLUSTERNAME_LABEL, getClusterName());
+        metadata.putLabelsItem(CLUSTERNAME_LABEL, getClusterName());
       }
       return metadata;
     }
@@ -336,7 +338,16 @@ public class PodHelper {
 
       if (oldPod != null) {
         String name = oldPod.getMetadata().getName();
-        return doNext(deletePod(name, info.getNamespace(), getNext()), packet);
+
+        long gracePeriodSeconds = 30; // default
+        String serverName = oldPod.getMetadata().getLabels().get(SERVERNAME_LABEL);
+        String clusterName = oldPod.getMetadata().getLabels().get(CLUSTERNAME_LABEL);
+        ServerSpec serverSpec = info.getDomain().getServer(serverName, clusterName);
+        if (serverSpec != null) {
+          gracePeriodSeconds = serverSpec.getShutdown().getTimeoutSeconds() + 10;
+        }
+
+        return doNext(deletePod(name, info.getNamespace(), gracePeriodSeconds, getNext()), packet);
       } else {
         return doNext(packet);
       }
@@ -347,8 +358,8 @@ public class PodHelper {
       return sko.getPod().getAndSet(null);
     }
 
-    private Step deletePod(String name, String namespace, Step next) {
-      V1DeleteOptions deleteOptions = new V1DeleteOptions();
+    private Step deletePod(String name, String namespace, long gracePeriodSeconds, Step next) {
+      V1DeleteOptions deleteOptions = new V1DeleteOptions().gracePeriodSeconds(gracePeriodSeconds);
       return new CallBuilder()
           .deletePodAsync(name, namespace, deleteOptions, new DefaultResponseStep<>(next));
     }
