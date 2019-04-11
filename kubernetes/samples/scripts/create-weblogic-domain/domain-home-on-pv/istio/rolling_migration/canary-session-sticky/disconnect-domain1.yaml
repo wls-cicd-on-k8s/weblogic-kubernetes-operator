@@ -1,0 +1,38 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: default-vs
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - default-gateway
+  http:
+  - match:
+    - uri:
+        prefix: /console
+    route:
+    - destination:
+        host: domain2-admin-server-external.ns2.svc.cluster.local
+        port:
+          number: 7001
+  - match:
+    - headers:
+        cookie:
+          regex: ^(.*?; )?(domain-name=domain2)(;.*)?$
+    route:
+    - destination:
+        host: domain2-cluster-cluster-1.ns2.svc.cluster.local
+        port:
+          number: 31111
+  - route:
+    - destination:
+        host: domain2-cluster-cluster-1.ns2.svc.cluster.local
+        port:
+          number: 31111
+      headers:
+        response:
+          add:
+            set-cookie:
+              domain-name=domain2; HttpOnly
+              

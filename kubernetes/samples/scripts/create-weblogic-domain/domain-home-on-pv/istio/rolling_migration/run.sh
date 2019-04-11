@@ -12,8 +12,11 @@ test_lb() {
     cookie=""
     genCookie=false
     firstReq=true
-    if [ ${COOKIE} ]; then
-        if [ ${COOKIE} ==  "AUTO" ]; then
+    JSID=""
+    secondReq=false
+    otherCookie=""
+    if [ "${COOKIE}" ]; then
+        if [ "${COOKIE}" ==  "AUTO" ]; then
             genCookie=true
         else 
             cookie=${COOKIE}
@@ -60,7 +63,7 @@ test_lb() {
                 if [ $((currentPos)) -eq $STAT_NUM ]; then
                     currentPos=0
                 fi
-                if $genCookie && $firstReq; then
+                if $genCookie && ($firstReq || $secondReq); then
                     echo "response:"
                     echo -ne "\tfrom $currentServer\n"
                 fi
@@ -74,7 +77,7 @@ test_lb() {
             do
                 echo $leftover | grep "set-cookie: " > /dev/null
                 if [ $? -ne 0 ]; then
-                    if [[ $firstReq && "$cookie" == "" ]]; then
+                    if [[ $firstReq && "$otherCookie" == "" && "$JSID" == "" ]]; then
                         echo "\n\tError exit without set-cookie headers"
                         exit 1
                     fi
@@ -82,20 +85,35 @@ test_lb() {
                 fi
                 leftover=${leftover#*set-cookie: }
                 oneCookie=${leftover%%;*}
-                if [ $firstReq == false ]; then
+                if !($firstReq || $secondReq); then
                     echo -ne "\n\nError exit with unexpected response set-cookie: $oneCookie from $currentServer\n"
+                    echo -ne "\n==================\n$content==================\n"
                     exit 1
                 fi
                 echo -ne "\twith header set-cookie: $oneCookie\n"
-                echo $cookie | grep $oneCookie > /dev/null
+                echo $oneCookie | grep "JSESSIONID=" > /dev/null
                 if [ $? -ne 0 ]; then
-                    if [ "$cookie" != "" ]; then
-                        cookie=$cookie"; "
+                    echo $otherCookie | grep $oneCookie > /dev/null
+                    if [ $? -ne 0 ]; then
+                        if [ "$otherCookie" != "" ]; then
+                            otherCookie=$otherCookie"; "
+                        fi
+                        otherCookie=$otherCookie$oneCookie
                     fi
-                    cookie=$cookie$oneCookie
+                else
+                    JSID=$oneCookie
+                    cookie="" 
                 fi
             done
+            if [ "$cookie" == "" ]; then
+                cookie=$otherCookie"; "$JSID
+            fi
             if $firstReq; then
+                echo -ne "\ncurl -i http://$GATEWAY_URL/testwebapp/ -H "cookie: $cookie" ...\n"
+                firstReq=false
+                secondReq=true
+                continue
+            elif $secondReq; then
                 echo -ne "\ncurl -i http://$GATEWAY_URL/testwebapp/ -H "cookie: $cookie" ...\n"
                 echo "--------stat of the latest $STAT_NUM requests: percent%(access count) --------"
                 for ((j=0;j<$pod_number;j++))
@@ -103,7 +121,7 @@ test_lb() {
                     echo -ne "${pod_names[j]}\t"
                 done
                 echo -ne "\n"
-                firstReq=false
+                secondReq=false
             fi
         fi
 
