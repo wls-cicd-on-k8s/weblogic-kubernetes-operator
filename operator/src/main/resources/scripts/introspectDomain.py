@@ -1097,7 +1097,9 @@ class DomainIntrospector(SecretManager):
     tg = TopologyGenerator(self.env)
 
     if tg.validate():
-      SitConfigGenerator(self.env).generate()
+      if os.environ.get('WEBLOGIC_SKIP_SITCFG_GENERATOR')!='true':
+        SitConfigGenerator(self.env).generate()
+
       BootPropertiesGenerator(self.env).generate()
       UserConfigAndKeyGenerator(self.env).generate()
 
