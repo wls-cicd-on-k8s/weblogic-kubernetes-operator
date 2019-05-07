@@ -77,10 +77,13 @@ function startWLS() {
   # Start WL Server
   #
 
-  # TBD We should probably || exit 1 if start-server.py itself fails, and dump NM log to stdout
-
-  trace "Start WebLogic Server via the nodemanager"
-  ${SCRIPTPATH}/wlst.sh $SCRIPTPATH/start-server.py
+  trace "Start WebLogic Server"
+  #old ${SCRIPTPATH}/wlst.sh $SCRIPTPATH/start-server.py
+  export JAVA_OPTIONS="${USER_MEM_ARGS} -XX:+UnlockExperimentalVMOptions -XX:+UseCGroupMemoryLimitForHeap -Dweblogic.nodemanager.ServiceEnabled=true ${JAVA_OPTIONS}"
+if [ ! "${SERVER_NAME}" = "${ADMIN_NAME}" ]; then
+    export ADMIN_URL=${ADMIN_URL:-http://${AS_SERVICE_NAME}:${ADMIN_PORT}}
+  fi
+  ${DOMAIN_HOME}/bin/startWebLogic.sh nodebug noderby
 }
 
 function mockWLS() {
@@ -92,19 +95,6 @@ function mockWLS() {
 
   createFolder $STATEFILE_DIR
   echo "RUNNING:Y:N" > $STATEFILE
-}
-
-function waitUntilShutdown() {
-  #
-  # Wait forever.   Kubernetes will monitor this pod via liveness and readyness probes.
-  #
-  if [ "${SERVER_OUT_IN_POD_LOG}" == 'true' ] ; then
-    trace "Showing the server out file from ${SERVER_OUT_FILE}"
-    tail -F -n +0 ${SERVER_OUT_FILE} || exitOrLoop
-  else
-    trace "Wait indefinitely so that the Kubernetes pod does not exit and try to restart"
-    while true; do sleep 60; done
-  fi
 }
 
 function mockWaitUntilShutdown() {
@@ -222,5 +212,4 @@ if [ "${MOCK_WLS}" == 'true' ]; then
   mockWaitUntilShutdown
 else
   startWLS
-  waitUntilShutdown
 fi

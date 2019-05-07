@@ -71,9 +71,9 @@ public class TuningParametersImpl extends ConfigMapConsumer implements TuningPar
 
     PodTuning pod =
         new PodTuning(
-            (int) readTuningParameter("readinessProbeInitialDelaySeconds", 30),
+            (int) readTuningParameter("readinessProbeInitialDelaySeconds", 8),
             (int) readTuningParameter("readinessProbeTimeoutSeconds", 5),
-            (int) readTuningParameter("readinessProbePeriodSeconds", 5),
+            (int) readTuningParameter("readinessProbePeriodSeconds", 3),
             (int) readTuningParameter("livenessProbeInitialDelaySeconds", 30),
             (int) readTuningParameter("livenessProbeTimeoutSeconds", 5),
             (int) readTuningParameter("livenessProbePeriodSeconds", 45));

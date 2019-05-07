@@ -24,12 +24,13 @@ DH=${DOMAIN_HOME?}
 
 STATEFILE=${DH}/servers/${SN}/data/nodemanager/${SN}.state
 
-if [ "${MOCK_WLS}" != 'true' ]; then
-  if [ `jps -l | grep -c " weblogic.NodeManager"` -eq 0 ]; then
-    trace "Error: WebLogic NodeManager process not found."
-    exit $RETVAL
-  fi
-fi
+#old if [ "${MOCK_WLS}" != 'true' ]; then
+#old   if [ `jps -l | grep -c " weblogic.NodeManager"` -eq 0 ]; then
+#old     trace "Error: WebLogic NodeManager process not found."
+#old     exit $RETVAL
+#old   fi
+#old fi
+
 if [ -f ${STATEFILE} ] && [ `grep -c "FAILED_NOT_RESTARTABLE" ${STATEFILE}` -eq 1 ]; then
   trace "Error: WebLogic Server state is FAILED_NOT_RESTARTABLE."
   exit $RETVAL

@@ -280,32 +280,34 @@ export JAVA_OPTIONS="${JAVA_OPTIONS} -Dweblogic.RootDirectory=${DOMAIN_HOME}"
 #  2) start NM in background
 #  3) wait up to 15 seconds for NM by monitoring log file
 #  4) 'exit 1' if wait more than 15 seconds
-# 
+#
 
-trace "Start the nodemanager, node manager home is '${NODEMGR_HOME}', log file is '${nodemgr_log_file}', out file is '${nodemgr_out_file}'."
+trace "Prepared nodemanager configuration"
 
-rm -f ${nodemgr_log_file} || exit 1
-rm -f ${nodemgr_out_file} || exit 1
-
-${stm_script} > ${nodemgr_out_file} 2>&1 &
-
-wait_count=0
-start_secs=$SECONDS
-max_wait_secs=${NODE_MANAGER_MAX_WAIT:-60}
-while [ 1 -eq 1 ]; do
-  sleep 1
-  if [ -e ${nodemgr_log_file} ] && [ `grep -c "Plain socket listener started" ${nodemgr_log_file}` -gt 0 ]; then
-    break
-  fi
-  if [ $((SECONDS - $start_secs)) -ge $max_wait_secs ]; then
-    trace "Info: Contents of node manager log '$nodemgr_log_file':"
-    cat ${nodemgr_log_file}
-    trace "Info: Contents of node manager out '$nodemgr_out_file':"
-    cat ${NODEMGR_OUT_FILE}
-    trace "Error: node manager failed to start within $max_wait_secs seconds."
-    exit 1
-  fi
-  wait_count=$((wait_count + 1))
-done
-
-trace "Nodemanager started in $((SECONDS - start_secs)) seconds."
+#old trace "Start the nodemanager, node manager home is '${NODEMGR_HOME}', log file is '${nodemgr_log_file}', out file is '${nodemgr_out_file}'."
+#old
+#old rm -f ${nodemgr_log_file} || exit 1
+#old rm -f ${nodemgr_out_file} || exit 1
+#old
+#old ${stm_script} > ${nodemgr_out_file} 2>&1 &
+#old
+#old wait_count=0
+#old start_secs=$SECONDS
+#old max_wait_secs=${NODE_MANAGER_MAX_WAIT:-60}
+#old while [ 1 -eq 1 ]; do
+#old   sleep 1
+#old   if [ -e ${nodemgr_log_file} ] && [ `grep -c "Plain socket listener started" ${nodemgr_log_file}` -gt 0 ]; then
+#old     break
+#old   fi
+#old   if [ $((SECONDS - $start_secs)) -ge $max_wait_secs ]; then
+#old     trace "Info: Contents of node manager log '$nodemgr_log_file':"
+#old     cat ${nodemgr_log_file}
+#old     trace "Info: Contents of node manager out '$nodemgr_out_file':"
+#old     cat ${NODEMGR_OUT_FILE}
+#old     trace "Error: node manager failed to start within $max_wait_secs seconds."
+#old     exit 1
+#old   fi
+#old   wait_count=$((wait_count + 1))
+#old done
+#old
+#old trace "Nodemanager started in $((SECONDS - start_secs)) seconds."
