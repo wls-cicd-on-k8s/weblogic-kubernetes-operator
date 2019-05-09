@@ -23,7 +23,7 @@ domain_uid = getEnvVar('DOMAIN_UID')
 server_name = getEnvVar('SERVER_NAME')
 domain_name = getEnvVar('DOMAIN_NAME')
 domain_path = getEnvVar('DOMAIN_HOME')
-service_name = "127.0.0.1"
+service_name = getEnvVar('SERVICE_NAME')
 
 print 'domain path is %s' % domain_path
 print 'server name is %s' % server_name

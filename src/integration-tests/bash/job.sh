@@ -103,13 +103,13 @@ function launchCommandJob {
   while : ; do
     sleep 3
     local mnow=`date +%s`
-    job_status=`kubectl get job $JOB_NAME | grep "$JOB_NAME" | awk '{ print $2; }'`
+    job_status=`kubectl get job $JOB_NAME | grep "$JOB_NAME" | awk '{ print $3; }'`
 
     # If the job is status 1 or the pod is status Completed, the job succeeded.
     # If the pod is status Error, we know the job failed.
 
-    if [ "$job_status" = "1/1" ]; then
-      echo "@@ Success. Job $JOB_NAME status is 1/1".
+    if [ "$job_status" = "1" ]; then
+      echo "@@ Success. Job $JOB_NAME status is 1".
       return_status="0"
       break
     fi

@@ -17,5 +17,5 @@ spec:
     app: "weblogic-operator"
   ports:
     - port: 8082
-      name: "https-internal"
+      name: "rest"
 {{- end }}

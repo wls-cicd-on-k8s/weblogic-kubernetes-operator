@@ -6,7 +6,6 @@ package oracle.kubernetes.operator.helpers;
 
 import static oracle.kubernetes.operator.LabelConstants.forDomainUidSelector;
 import static oracle.kubernetes.operator.VersionConstants.DEFAULT_DOMAIN_VERSION;
-import static oracle.kubernetes.operator.VersionConstants.DOMAIN_V2;
 
 import io.kubernetes.client.custom.IntOrString;
 import io.kubernetes.client.models.V1Container;
@@ -187,14 +186,12 @@ public abstract class PodStepContext extends StepContextBase {
       List<V1ContainerPort> ports = new ArrayList<>();
       if (scan.getNetworkAccessPoints() != null) {
         for (NetworkAccessPoint nap : scan.getNetworkAccessPoints()) {
-          if ((nap.getListenPort() != 8888) && (!nap.getName().startsWith("istio-"))) {
-            V1ContainerPort port =
-                new V1ContainerPort()
-                    .name(LegalNames.toDNS1123LegalName(nap.getName()))
-                    .containerPort(nap.getListenPort())
-                    .protocol("TCP");
-            ports.add(port);
-          }
+          V1ContainerPort port =
+              new V1ContainerPort()
+                  .name(LegalNames.toDNS1123LegalName(nap.getName()))
+                  .containerPort(nap.getListenPort())
+                  .protocol("TCP");
+          ports.add(port);
         }
       }
       if (scan.getListenPort() != null) {
@@ -603,18 +600,6 @@ public abstract class PodStepContext extends StepContextBase {
     return new V1Pod().metadata(createMetadata()).spec(createSpec(TuningParameters.getInstance()));
   }
 
-  private String getVersion() {
-    String wlsImage = getImageName();
-    LOGGER.info("wlsImage:   ", wlsImage);
-    String version = DOMAIN_V2;
-    if (wlsImage.indexOf(":") > 0) {
-      String[] versionArray = wlsImage.split(":");
-      version = versionArray[versionArray.length - 1];
-    }
-    LOGGER.info("wlsImage version:   ", version);
-    return version;
-  }
-
   protected V1ObjectMeta createMetadata() {
     V1ObjectMeta metadata = new V1ObjectMeta().name(getPodName()).namespace(getNamespace());
     metadata
@@ -628,9 +613,7 @@ public abstract class PodStepContext extends StepContextBase {
         .putLabelsItem(
             LabelConstants.CLUSTERRESTARTVERSION_LABEL, getServerSpec().getClusterRestartVersion())
         .putLabelsItem(
-            LabelConstants.SERVERRESTARTVERSION_LABEL, getServerSpec().getServerRestartVersion())
-        .putLabelsItem(LabelConstants.APP_LABEL, getPodName())
-        .putLabelsItem(LabelConstants.VERSION_LABEL, getVersion());
+            LabelConstants.SERVERRESTARTVERSION_LABEL, getServerSpec().getServerRestartVersion());
 
     // Add prometheus annotations. This will overwrite any custom annotations with same name.
     AnnotationHelper.annotateForPrometheus(metadata, getDefaultPort());
@@ -747,7 +730,7 @@ public abstract class PodStepContext extends StepContextBase {
         .timeoutSeconds(getReadinessProbeTimeoutSeconds(tuning))
         .periodSeconds(getReadinessProbePeriodSeconds(tuning))
         .failureThreshold(FAILURE_THRESHOLD)
-        .httpGet(httpGetAction(READINESS_PATH, 8888));
+        .httpGet(httpGetAction(READINESS_PATH, getDefaultPort()));
     return readinessProbe;
   }
 

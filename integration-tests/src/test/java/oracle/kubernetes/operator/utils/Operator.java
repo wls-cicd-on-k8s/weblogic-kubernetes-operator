@@ -455,8 +455,6 @@ public class Operator {
           logger.info("Creating domain namespace " + domainNS);
           ExecCommand.exec("kubectl create namespace " + domainNS);
         }
-        logger.info("Enable istio injection on domain namespace " + domainNS);
-        ExecCommand.exec("kubectl label namespace " + domainNS + " istio-injection=enabled");
       }
     }
     // customize the inputs yaml file to generate a self-signed cert for the external Operator REST

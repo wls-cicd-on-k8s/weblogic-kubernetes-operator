@@ -47,7 +47,7 @@ public class TestUtils {
     cmd.append("kubectl get pod ").append(podName).append(" -n ").append(domainNS);
 
     // check for admin pod
-    checkCmdInLoop(cmd.toString(), new String[] {"1/1", "2/2"}, podName);
+    checkCmdInLoop(cmd.toString(), "1/1", podName);
   }
 
   /** @param cmd - kubectl get pod <podname> -n namespace */
@@ -382,34 +382,13 @@ public class TestUtils {
   }
 
   public static int getPodRestartCount(String podName, String namespace) throws Exception {
-    StringBuffer cmd = new StringBuffer("kubectl get pod ");
+    StringBuffer cmd = new StringBuffer("kubectl describe pod ");
     cmd.append(podName)
         .append(" --namespace ")
         .append(namespace)
-        .append(" -o jsonpath='{.status.containerStatuses[*].name}'");
+        .append(" | egrep Restart | awk '{print $3}'");
+
     ExecResult result = ExecCommand.exec(cmd.toString());
-    if (result.exitValue() != 0) {
-      throw new RuntimeException(
-          "FAIL: Couldn't find the pod " + podName + " in namespace " + namespace);
-    }
-
-    String containers = result.stdout().trim();
-    String[] all = containers.split(" ");
-    int pos = 0;
-    for (String name : all) {
-      if ("weblogic-server".equals(name)) {
-        break;
-      }
-      pos++;
-    }
-
-    cmd = new StringBuffer("kubectl get pod ");
-    cmd.append(podName)
-        .append(" --namespace ")
-        .append(namespace)
-        .append(" -o jsonpath='{.status.containerStatuses[" + pos)
-        .append("].restartCount}'");
-    result = ExecCommand.exec(cmd.toString());
     if (result.exitValue() != 0) {
       throw new RuntimeException(
           "FAIL: Couldn't find the pod " + podName + " in namespace " + namespace);
@@ -1084,48 +1063,6 @@ public class TestUtils {
       throw new RuntimeException("Keystore Obj is null");
     }
     return myKeyStore;
-  }
-
-  private static void checkCmdInLoop(String cmd, String[] matchStrs, String k8sObjName)
-      throws Exception {
-    int i = 0;
-    while (i < BaseTest.getMaxIterationsPod()) {
-      ExecResult result = ExecCommand.exec(cmd);
-
-      // pod might not have been created or if created loop till condition
-      if (result.exitValue() != 0
-          || (result.exitValue() == 0 && !match(result.stdout(), matchStrs))) {
-        logger.info("Output for " + cmd + "\n" + result.stdout() + "\n " + result.stderr());
-        // check for last iteration
-        if (i == (BaseTest.getMaxIterationsPod() - 1)) {
-          throw new RuntimeException(
-              "FAILURE: pod " + k8sObjName + " is not running/ready, exiting!");
-        }
-        logger.info(
-            "Pod "
-                + k8sObjName
-                + " is not Running Ite ["
-                + i
-                + "/"
-                + BaseTest.getMaxIterationsPod()
-                + "], sleeping "
-                + BaseTest.getWaitTimePod()
-                + " seconds more");
-
-        Thread.sleep(BaseTest.getWaitTimePod() * 1000);
-        i++;
-      } else {
-        logger.info("Pod " + k8sObjName + " is Running");
-        break;
-      }
-    }
-  }
-
-  private static boolean match(String result, String[] matchStrs) {
-    for (String str : matchStrs) {
-      if (result.contains(str)) return true;
-    }
-    return false;
   }
 
   private static void checkCmdInLoop(String cmd, String matchStr, String k8sObjName)
