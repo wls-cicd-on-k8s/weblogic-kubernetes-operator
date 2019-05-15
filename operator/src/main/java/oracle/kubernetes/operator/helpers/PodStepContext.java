@@ -624,6 +624,8 @@ public abstract class PodStepContext extends StepContextBase {
 
     updateForStarupMode(pod);
     updateForShutdown(pod);
+
+    metadata.addOwnerReferencesItem(getDomain().toOwnerReference());
     return pod;
   }
 

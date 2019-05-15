@@ -7,6 +7,7 @@ package oracle.kubernetes.weblogic.domain.model;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import io.kubernetes.client.models.V1ObjectMeta;
+import io.kubernetes.client.models.V1OwnerReference;
 import io.kubernetes.client.models.V1SecretReference;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -16,6 +17,7 @@ import java.util.Optional;
 import javax.annotation.Nonnull;
 import javax.validation.Valid;
 import oracle.kubernetes.json.Description;
+import oracle.kubernetes.operator.KubernetesConstants;
 import oracle.kubernetes.operator.LabelConstants;
 import oracle.kubernetes.operator.VersionConstants;
 import oracle.kubernetes.weblogic.domain.EffectiveConfigurationFactory;
@@ -395,6 +397,18 @@ public class Domain {
    */
   public List<String> getConfigOverrideSecrets() {
     return spec.getConfigOverrideSecrets();
+  }
+
+  public V1OwnerReference toOwnerReference() {
+    return new V1OwnerReference()
+        .apiVersion(
+            Optional.ofNullable(apiVersion)
+                .orElse(
+                    KubernetesConstants.DOMAIN_GROUP + "/" + KubernetesConstants.DOMAIN_VERSION))
+        .controller(true)
+        .kind(Optional.ofNullable(kind).orElse(KubernetesConstants.DOMAIN))
+        .name(metadata.getName())
+        .uid(metadata.getUid());
   }
 
   @Override

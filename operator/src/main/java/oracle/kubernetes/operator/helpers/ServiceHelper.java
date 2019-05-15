@@ -332,7 +332,10 @@ public class ServiceHelper {
     }
 
     V1Service createModel() {
-      return AnnotationHelper.withSha256Hash(createRecipe());
+      V1Service svc = AnnotationHelper.withSha256Hash(createRecipe());
+
+      svc.getMetadata().addOwnerReferencesItem(getDomain().toOwnerReference());
+      return svc;
     }
 
     V1Service createRecipe() {
