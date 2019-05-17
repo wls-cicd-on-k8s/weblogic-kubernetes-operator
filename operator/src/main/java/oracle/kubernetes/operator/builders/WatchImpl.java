@@ -41,7 +41,13 @@ public class WatchImpl<T> implements WatchI<T> {
 
   @Override
   public boolean hasNext() {
-    return impl.hasNext();
+    try {
+      return impl.hasNext();
+    } catch (RuntimeException ex) {
+      System.out.println(
+          "For-BOB: hasNext() got RuntimeException " + ex + ", with cause" + ex.getCause());
+      throw ex;
+    }
   }
 
   @Override
