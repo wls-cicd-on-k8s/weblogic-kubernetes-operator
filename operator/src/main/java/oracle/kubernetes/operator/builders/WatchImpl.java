@@ -22,6 +22,8 @@ public class WatchImpl<T> implements WatchI<T> {
   WatchImpl(Pool<ApiClient> pool, ApiClient client, Watch<T> impl) {
     this.pool = pool;
     this.client = client;
+    // trying https://github.com/kubernetes-client/java/pull/155
+    client.getHttpClient().setReadTimeout(60, java.util.concurrent.TimeUnit.SECONDS);
     this.impl = impl;
   }
 
@@ -45,7 +47,10 @@ public class WatchImpl<T> implements WatchI<T> {
       return impl.hasNext();
     } catch (RuntimeException ex) {
       System.out.println(
-          "For-BOB: hasNext() got RuntimeException " + ex + ", with cause" + ex.getCause());
+          "For-BOB: hasNext() got RuntimeException " + ex + ", with cause " + ex.getCause());
+      if (ex.getCause() != null) {
+        ex.getCause().printStackTrace();
+      }
       throw ex;
     }
   }
