@@ -575,8 +575,8 @@ public final class Fiber implements Runnable, Future<Void>, ComponentRegistry {
         }
 
         exitCallback.onExit();
+        exitCallback = PLACEHOLDER;
       }
-      exitCallback = PLACEHOLDER;
     }
   }
 
