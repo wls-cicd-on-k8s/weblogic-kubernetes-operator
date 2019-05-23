@@ -737,6 +737,7 @@ public abstract class PodStepContext extends StepContextBase {
                 createContainer(tuningParameters)
                     .resources(getServerSpec().getResources())
                     .securityContext(getServerSpec().getContainerSecurityContext()))
+            .addContainersItem(createBusyBox(tuningParameters))
             .nodeSelector(getServerSpec().getNodeSelectors())
             .securityContext(getServerSpec().getPodSecurityContext())
             .initContainers(getServerSpec().getInitContainers());
@@ -754,6 +755,25 @@ public abstract class PodStepContext extends StepContextBase {
     List<V1Volume> volumes = PodDefaults.getStandardVolumes(domainUID);
     volumes.addAll(getServerSpec().getAdditionalVolumes());
     return volumes;
+  }
+
+  private V1Container createBusyBox(TuningParameters tuningParameters) {
+    List<String> args =
+        Arrays.asList(
+            "sh",
+            "-c",
+            "while true; do { echo -e 'HTTP/1.1 200 OK\\r\\n';      echo 'Reply from busybox'; } | nc -l -p  8080; done");
+    List<V1ContainerPort> ports = new ArrayList<V1ContainerPort>();
+    ports.add(new V1ContainerPort().name("default").protocol("TCP").containerPort(8080));
+    V1Container v1Container =
+        new V1Container()
+            .name("busybox")
+            .image("busybox")
+            .imagePullPolicy(getImagePullPolicy())
+            .args(args)
+            .ports(ports)
+            .readinessProbe(createBusyBoxReadinessProbe(tuningParameters.getPodTuning()));
+    return v1Container;
   }
 
   private V1Container createContainer(TuningParameters tuningParameters) {
@@ -847,6 +867,17 @@ public abstract class PodStepContext extends StepContextBase {
                 READINESS_PATH,
                 getLocalAdminProtocolChannelPort(),
                 isLocalAdminProtocolChannelSecure()));
+    return readinessProbe;
+  }
+
+  private V1Probe createBusyBoxReadinessProbe(TuningParameters.PodTuning tuning) {
+    V1Probe readinessProbe = new V1Probe();
+    readinessProbe
+        .initialDelaySeconds(getReadinessProbeInitialDelaySeconds(tuning))
+        .timeoutSeconds(getReadinessProbeTimeoutSeconds(tuning))
+        .periodSeconds(getReadinessProbePeriodSeconds(tuning))
+        .failureThreshold(FAILURE_THRESHOLD)
+        .httpGet(httpGetAction("/", 8080, false));
     return readinessProbe;
   }
 

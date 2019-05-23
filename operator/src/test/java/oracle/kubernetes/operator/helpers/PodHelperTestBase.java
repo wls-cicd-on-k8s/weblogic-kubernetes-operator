@@ -277,7 +277,7 @@ public abstract class PodHelperTestBase {
 
   @Test
   public void whenPodCreated_specHasOneContainer() {
-    assertThat(getCreatedPod().getSpec().getContainers(), hasSize(1));
+    assertThat(getCreatedPod().getSpec().getContainers(), hasSize(2));
   }
 
   @Test
